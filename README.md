@@ -1,8 +1,8 @@
-# 🛡️ HID Defender — USB Rubber Ducky Attack Detection
+# 🛡️ HID Defender — USB HID Defense for Final Year Project
 
-**Cybersecurity Final Year Project — Defensive Module**
+**Cybersecurity Final Year Project — Windows HID defense module**
 
-A real-time Python-based defensive system that monitors USB HID (Human Interface Device) connections, identifies potential keystroke injection attacks (e.g., USB Rubber Ducky, Raspberry Pi Pico HID), and alerts the user when an untrusted device is detected.
+A Python-based project that detects suspicious USB Human Interface Devices (HID) on Windows, logs untrusted connections, and responds to potential Rubber Ducky / Raspberry Pi Pico HID attacks.
 
 ---
 
@@ -10,183 +10,200 @@ A real-time Python-based defensive system that monitors USB HID (Human Interface
 
 ```
 hid-defender/
-├── hid_defender.py         ← Main monitoring script
-├── trusted_devices.json    ← Whitelist of trusted USB input devices
-├── requirements.txt        ← Python dependencies
-├── hid_alerts.log          ← Auto-created log file (on first run)
-└── README.md               ← This file
+├── hid_defender.py              ← Main application entrypoint
+├── trusted_devices.json         ← Whitelist of trusted HID devices
+├── trusted_devices_example.json ← Example whitelist file
+├── requirements.txt             ← Python dependency list
+├── hid_alerts.log               ← Generated event log (CSV style)
+├── README.md                    ← Project documentation
+└── src/
+    ├── alert_system.py          ← Alert + lock-screen helpers
+    ├── config.py                ← Constants and platform detection
+    ├── device_monitor.py        ← USB/HID device discovery helpers
+    ├── device_validator.py      ← Whitelist + evaluation logic
+    ├── keystroke_monitor.py     ← Keystroke and command detection
+    └── logging_setup.py         ← Logger / audit log formatter
 ```
 
 ---
 
-## ⚙️ How It Works
+## ⚙️ Architecture Overview
 
-### Architecture Overview
+This project is designed for a Windows-focused lab demonstration, with fallback paths for macOS/Linux.
 
 ```
-USB Device Plugged In
+USB HID device connected
         │
         ▼
-  [pyudev Monitor]         ← Listens on the Linux udev 'input' subsystem
+  main_windows() / main_macos() / main_linux()
         │
         ▼
-  is_keyboard_hid_device() ← Filters: only keyboard-like devices proceed
+  run_baseline_setup() loads or creates trusted whitelist
         │
         ▼
-  extract_device_info()    ← Reads vendor, product, device node from udev properties
+  new device arrives → parse_device()
         │
         ▼
-  is_trusted()             ← Compares against trusted_devices.json (case-insensitive)
+  evaluate() checks:
+      • whitelist VID/PID
+      • known suspicious VID blacklist
+      • trusted brand heuristics
+      • unknown HID device
         │
        / \
       /   \
-  TRUSTED  UNTRUSTED
-     │          │
-     ▼          ▼
- log_event()  log_event()  +  send_alert()
- [SAFE]       [ALERT]         (zenity GUI or console banner)
-```
-
-### Step-by-Step Flow
-
-1. **Startup** — The script loads `trusted_devices.json` and starts a `pyudev.MonitorObserver` listening on the Linux `input` subsystem in a background thread.
-
-2. **Device Detection** — When any USB input device is connected, udev emits an `add` event. The observer callback fires `handle_device_event()`.
-
-3. **HID Filtering** — `is_keyboard_hid_device()` checks for three signals:
-   - `ID_INPUT_KEYBOARD=1` (explicit udev keyboard identification)
-   - `"keyboard"` in the sysfs path
-   - A USB `input` device with `ID_INPUT=1` (broad HID match)
-
-4. **Info Extraction** — `extract_device_info()` climbs the udev parent device chain to find USB-level attributes (`ID_VENDOR`, `ID_MODEL`, etc.), since these are often not present on the `input` node directly.
-
-5. **Trust Check** — `is_trusted()` does a case-insensitive substring match of vendor+product against every whitelist entry. This tolerates minor name variations.
-
-6. **Response**:
-   - **Trusted** → `log_event(..., "SAFE")` — informational log entry only.
-   - **Untrusted** → `log_event(..., "ALERT")` + `send_alert()`:
-     - Tries a `zenity` GTK popup dialog first.
-     - Falls back to a colour-highlighted terminal banner if zenity is unavailable or no display is present.
-
----
-
-## 🚀 Installation & Usage
-
-### 1. Install Dependencies (Linux)
-
-```bash
-# Python library for udev
-sudo pip3 install pyudev
-
-# GUI alert tool (optional but recommended)
-sudo apt install zenity
-```
-
-### 2. Run the Monitor
-
-```bash
-# Recommended: run as root for full udev attribute access
-sudo python3 hid_defender.py
-```
-
-### 3. Expected Output (on plug-in)
-
-**Trusted device:**
-```
-[2025-04-04 14:30:00]  INFO      ✅ SAFE  | Vendor: Logitech             | Product: USB Keyboard             | Node: /dev/input/event4    | Time: 2025-04-04 14:30:00
-```
-
-**Untrusted device (e.g., Pico HID / Rubber Ducky):**
-```
-[2025-04-04 14:31:00]  WARNING   🚨 ALERT | Vendor: Unknown              | Product: Raspberry Pi Pico        | Node: /dev/input/event5    | Time: 2025-04-04 14:31:00
-
-══════════════════════════════════════════════════════════════════════
-  !!!  SECURITY ALERT — UNTRUSTED USB HID DEVICE DETECTED  !!!
-══════════════════════════════════════════════════════════════════════
-  Vendor  : Unknown
-  Product : Raspberry Pi Pico
-  Node    : /dev/input/event5
-  Time    : 2025-04-04 14:31:00
-══════════════════════════════════════════════════════════════════════
-  ACTION  : Disconnect the device immediately!
-══════════════════════════════════════════════════════════════════════
+ TRUSTED   UNTRUSTED
+   │           │
+   │        log_event(..., reason)
+   │        show_alert()
+   │        optional kill_device()
+   │        keystroke_mon tracks first-input delay
 ```
 
 ---
 
-## 📋 Whitelist Format (`trusted_devices.json`)
+## ✅ What the system does
+
+- **HID Whitelist**
+  - Uses normalized `VID_xxxx&PID_xxxx` IDs for trusted devices
+  - Stores trusted devices in `trusted_devices.json`
+  - Treats unknown HID devices as suspicious by default
+
+- **Windows USB Monitoring**
+  - Uses `wmi` and `pythoncom` on Windows to watch `Win32_PnPEntity` creation events
+  - Filters new devices to HID-like keyboard / input devices
+
+- **Detection + Response**
+  - Logs every new HID event
+  - Alerts the user for untrusted devices
+  - Attempts to disable the device with `pnputil /disable-device` if running as Admin
+
+- **Keystroke Behavior Analysis**
+  - Detects fast typing above `KEYSTROKE_THRESHOLD`
+  - Flags first input delay when suspicious device input starts unusually quickly
+  - Recognizes suspicious typing patterns like PowerShell and command keywords
+
+- **Malicious Command Detection**
+  - Detects patterns such as `powershell`, `wget`, `curl`, `reg add`, `Get-Process`, `Stop-Service`
+  - Creates alerts when these patterns appear in keystrokes
+
+- **Logging System**
+  - Writes a CSV-style audit log to `hid_alerts.log`
+  - Includes `Time`, `Device`, `Vendor`, `Product`, `ID`, `Result`, `Action`, `Reason`
+
+---
+
+## 🔧 Installation
+
+### 1. Install Python dependencies
+
+```bash
+python3 -m pip install -r requirements.txt
+```
+
+### 2. Windows-specific dependency
+
+On Windows, install:
+
+```bash
+python3 -m pip install wmi pypiwin32
+```
+
+> If you are on macOS or Linux, the `wmi` package will not install properly and the Windows monitoring path will not run.
+
+---
+
+## ▶️ Running the tool
+
+### Demo mode
+
+```bash
+python3 hid_defender.py --demo
+```
+
+This runs a built-in attack simulation that shows:
+- fast keystroke injection detection
+- malicious command pattern detection
+- first-input delay explanation
+
+### Real monitoring mode on Windows
+
+```bash
+python3 hid_defender.py
+```
+
+The script will:
+- start USB/HID monitoring
+- load the trusted whitelist
+- watch for new HID device events
+- log and alert when an unknown device connects
+
+---
+
+## 📋 Whitelist format
+
+Use `trusted_devices.json` to define trusted keyboards.
+
+Example format:
 
 ```json
 [
   {
+    "hardware_id": "VID_046D&PID_C52B",
     "vendor": "Logitech",
-    "product": "USB Keyboard",
-    "notes": "Optional description field — ignored by the script"
+    "name": "Logitech USB Keyboard"
+  },
+  {
+    "hardware_id": "VID_1B1C&PID_1BAC",
+    "vendor": "Standard system devices",
+    "name": "USB Input Device"
   }
 ]
 ```
 
-- **`vendor`** and **`product`** are matched as **case-insensitive substrings**.
-- You can add as many entries as needed.
-- To find the exact vendor/product of a connected device, run:
-  ```bash
-  udevadm info --query=all --name=/dev/input/event4
-  # or
-  cat /sys/class/input/event4/device/name
-  lsusb
-  ```
+- The script normalizes hardware IDs to `VID_xxxx&PID_xxxx`
+- For Windows, it extracts this from `PNPDeviceID`
+- Add a trusted device entry before demoing the whitelist behavior
 
 ---
 
-## 🔧 Key Functions
+## 🧠 Code map
 
-| Function | Purpose |
+| File | Purpose |
 |---|---|
-| `load_whitelist(filepath)` | Parses `trusted_devices.json` into a list of dicts |
-| `extract_device_info(device)` | Reads vendor, product, node from udev device hierarchy |
-| `is_keyboard_hid_device(device)` | Filters to keyboard-class HID devices |
-| `is_trusted(device_info, whitelist)` | Substring-matches device against whitelist |
-| `log_event(device_info, status)` | Writes a `SAFE`/`ALERT` line to log file + terminal |
-| `send_alert(device_info)` | Sends zenity GUI popup or terminal banner |
-| `handle_device_event(device, wl)` | Orchestrates the full detection–log–alert pipeline |
-| `start_monitor(whitelist)` | Starts the real-time udev background observer |
+| `hid_defender.py` | Main app + platform-specific monitoring loops |
+| `src/config.py` | Platform flags, paths, thresholds, malicious patterns |
+| `src/device_monitor.py` | Windows and macOS USB/HID parsing helpers |
+| `src/device_validator.py` | Whitelist loading, normalization, suspicious evaluation |
+| `src/keystroke_monitor.py` | Keystroke speed, first-input delay, command detection |
+| `src/logging_setup.py` | Console + audit log formatting |
+| `src/alert_system.py` | Alert sound, popup, and workstation lock helpers |
 
 ---
 
-## 🔒 Security Considerations
+## 🧪 Demo & validation steps
 
-| Aspect | Detail |
-|---|---|
-| **Root access** | Full udev attributes require `sudo`. Script warns if non-root. |
-| **False positives** | Expand whitelist with real device names found via `lsusb` or `udevadm` |
-| **False negatives** | Attacker devices may spoof vendor/product — consider adding USB port-level controls |
-| **Log tampering** | Logs are append-only; in production, forward to a remote SIEM |
-| **Response escalation** | Extend `send_alert()` to trigger automatic port disabling via `uhubctl` |
+1. Add your trusted keyboard to `trusted_devices.json`.
+2. Run `python3 hid_defender.py --demo` to verify core detection logic.
+3. On Windows, plug in a Raspberry Pi Pico as HID and watch for alerts.
+4. Inspect `hid_alerts.log` to confirm logged `UNTRUSTED` events and reasons.
 
 ---
 
-## 📜 Log File Format (`hid_alerts.log`)
+## 🎓 Notes for the final year project
+
+- This implementation is designed for a controlled lab demo.
+- The real defense is in detection, logging, and alerting.
+- Blocking via `pnputil` is optional and only works with Admin privileges on Windows.
+- If `wmi` cannot be installed, the code still runs in demo mode.
+
+---
+
+## 📜 Example log output
 
 ```
-[2025-04-04 14:30:00]  INFO      ✅ SAFE  | Vendor: Logitech             | Product: USB Keyboard    | Node: /dev/input/event4 | Time: 2025-04-04 14:30:00
-[2025-04-04 14:31:00]  WARNING   🚨 ALERT | Vendor: Unknown              | Product: Pico            | Node: /dev/input/event5 | Time: 2025-04-04 14:31:00
+2026-04-15 18:24:14,Logitech USB Keyboard,Logitech,Keyboard,VID_046D&PID_C52B,TRUSTED,ALLOWED,Whitelisted device
+2026-04-15 18:24:20,Unknown Device,Unknown,Keyboard,VID_239A&PID_XXXX,UNTRUSTED,BLOCKED,Unknown HID device
 ```
 
----
-
-## 🧪 Testing in the Lab
-
-1. Plug in your **trusted** keyboard → should log `SAFE`.
-2. Plug in your **Raspberry Pi Pico** configured as HID → should trigger `ALERT` + popup.
-3. Check `hid_alerts.log` for the full audit trail.
-
-To simulate without hardware:
-```bash
-# List current input devices to understand naming
-ls /dev/input/
-udevadm monitor --subsystem-match=input  # watch live udev events
-```
-
----
-
-*Built for academic demonstration purposes in a controlled lab environment.*
+*Use this file when presenting your project to show clear detection and audit trails.*

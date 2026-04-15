@@ -3,6 +3,7 @@
 # ==========================================
 
 import os
+import re
 import json
 import time
 from datetime import datetime
@@ -11,6 +12,24 @@ from .config import (
     SUSPICIOUS_MAPPING, RECENT_SEEN
 )
 from .device_monitor import get_macos_usb_devices
+
+HWID_RE = re.compile(r"(VID_[0-9A-F]{4}).*(PID_[0-9A-F]{4})")
+
+
+def normalize_hardware_id(hardware_id):
+    """Normalize a Windows PNP device ID to VID_xxxx&PID_xxxx."""
+    hw = str(hardware_id).upper()
+    match = HWID_RE.search(hw)
+    if match:
+        return f"{match.group(1)}&{match.group(2)}"
+    return hw.strip()
+
+
+def hardware_id_matches(stored_id, raw_id):
+    """Compare whitelist entries against the detected device ID."""
+    normalized_stored = normalize_hardware_id(stored_id)
+    normalized_raw = normalize_hardware_id(raw_id)
+    return normalized_stored and normalized_raw and normalized_stored == normalized_raw
 
 
 def get_whitelist():
@@ -40,35 +59,20 @@ def run_baseline_setup(wmi_obj=None, logger=None):
     new_baseline = []
     
     if wmi_obj:
-        # Windows mode
+        # Windows mode: store normalized VID/PID for reliable matching
         from .device_monitor import _is_valid_hid, _parse_windows_device
         for dev in wmi_obj.Win32_PnPEntity():
             if _is_valid_hid(dev):
                 details = _parse_windows_device(dev)
-                hw_id = details['id']
-                # Extract just the VID/PID part for the signature
-                if "VID_" in hw_id and "PID_" in hw_id:
-                    try:
-                        idx = hw_id.index("VID_")
-                        hw_id = hw_id[idx:idx+17]
-                    except:
-                        pass
-
+                hw_id = normalize_hardware_id(details['id'])
                 entry = {"hardware_id": hw_id, "vendor": details['vendor'], "name": details['name']}
                 if entry not in new_baseline:
                     new_baseline.append(entry)
     else:
-        # macOS/Linux mode
+        # macOS/Linux mode: retain the vendor/product signature if no VID/PID is available
         devices = get_macos_usb_devices()
         for details in devices:
-            hw_id = details['id']
-            if "VID_" in hw_id:
-                try:
-                    idx = hw_id.index("VID_")
-                    hw_id = hw_id[idx:idx+17]
-                except:
-                    pass
-            
+            hw_id = normalize_hardware_id(details['id'])
             entry = {"hardware_id": hw_id, "vendor": details['vendor'], "name": details['name']}
             if entry not in new_baseline:
                 new_baseline.append(entry)
@@ -132,32 +136,30 @@ def parse_device(dev_info):
 
 def evaluate(info, whitelist):
     """Analyzes a new connection for suspicious traits."""
-    raw_id = info['id'].upper()
+    raw_id = normalize_hardware_id(info['id'])
     v_low = info['vendor'].lower()
     p_low = info['product'].lower()
     n_low = info['name'].lower()
 
-    # Step 1: Check Blacklist (Attack Tools)
+    # Step 1: Check blacklisted hardware IDs for known attack vectors
     for bad_vid in ATTACK_VECTORS:
         if bad_vid in raw_id:
-            return "UNTRUSTED", "BLOCKED"
+            return "UNTRUSTED", "BLOCKED", f"Attack-vector VID detected: {bad_vid}"
 
-    # Step 2: Check Personal Whitelist
+    # Step 2: Check the trusted whitelist by exact normalized VID/PID match
     for item in whitelist:
-        stored_id = item.get("hardware_id", "").upper()
-        if stored_id and stored_id in raw_id:
-            return "TRUSTED", "ALLOWED"
+        if hardware_id_matches(item.get("hardware_id", ""), raw_id):
+            return "TRUSTED", "ALLOWED", "Whitelisted device"
 
-    # Step 3: Heuristic Brand Check (Trusted manufacturers)
+    # Step 3: Heuristic allow-list for familiar brands and mice
     if any(brand in v_low or brand in p_low or brand in n_low for brand in BIG_BRANDS):
-        return "SAFE", "ALLOWED"
-        
-    # Step 4: Device Type Heuristic (Mice are usually safe)
-    if "mouse" in p_low or "mouse" in n_low:
-        return "SAFE", "ALLOWED"
+        return "SAFE", "ALLOWED", "Known peripheral brand"
 
-    # Default to safe if nothing else matched
-    return "SAFE", "ALLOWED"
+    if "mouse" in p_low or "mouse" in n_low:
+        return "SAFE", "ALLOWED", "Likely mouse device"
+
+    # Default: unknown HID device is treated as suspicious in student demo mode
+    return "UNTRUSTED", "BLOCKED", "Unknown HID device"
 
 
 def should_debounce(device_id):

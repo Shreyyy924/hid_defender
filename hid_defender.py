@@ -56,15 +56,15 @@ def kill_device(hw_id, logger):
     return False
 
 
-def handle_new_event(dev_obj, whitelist, logger):
+def handle_new_event(dev_obj, whitelist, logger, keystroke_mon=None):
     """Main event coordinator for a new hardware plug-in."""
     info = parse_device(dev_obj)
     
     if should_debounce(info['id']):
         return
 
-    result, action = evaluate(info, whitelist)
-    log_event(logger, info, result, action)
+    result, action, reason = evaluate(info, whitelist)
+    log_event(logger, info, result, action, reason)
 
     if result == "TRUSTED":
         print(f"[*] Trusted device connected: {info['name']}")
@@ -77,6 +77,9 @@ def handle_new_event(dev_obj, whitelist, logger):
         print("!"*50 + "\n")
 
         play_alert_sound()
+
+        if keystroke_mon:
+            keystroke_mon.register_device_connection(info)
 
         if IS_WINDOWS:
             try:
@@ -175,6 +178,7 @@ def main_windows(logger):
     wmi_client = wmi.WMI()
     
     trusted_baseline = run_baseline_setup(wmi_client, logger)
+    print(f"Loaded {len(trusted_baseline)} trusted HID devices from whitelist.")
     print(f"Monitoring hidden USB events... (Log file: {os.path.basename(LOG_PATH)})")
     
     watcher = wmi_client.Win32_PnPEntity.watch_for("creation")
@@ -184,7 +188,7 @@ def main_windows(logger):
                 new_dev = watcher()
                 from src.device_monitor import _is_valid_hid
                 if _is_valid_hid(new_dev):
-                    handle_new_event(new_dev, trusted_baseline, logger)
+                    handle_new_event(new_dev, trusted_baseline, logger, keystroke_mon)
             except Exception as e:
                 logger.error(f"Error processing device event: {e}")
                 time.sleep(1)
@@ -227,7 +231,7 @@ def main_macos(logger):
                 new_device_ids = current_ids_set - previous_ids
                 for dev_id in new_device_ids:
                     dev_obj = current_ids[dev_id]
-                    handle_new_event(dev_obj, trusted_baseline, logger)
+                    handle_new_event(dev_obj, trusted_baseline, logger, keystroke_mon)
                 
                 previous_devices = current_ids
                 time.sleep(poll_interval)
@@ -274,7 +278,7 @@ def main_linux(logger):
                 new_device_ids = current_ids_set - previous_ids
                 for dev_id in new_device_ids:
                     dev_obj = current_ids[dev_id]
-                    handle_new_event(dev_obj, trusted_baseline, logger)
+                    handle_new_event(dev_obj, trusted_baseline, logger, keystroke_mon)
                 
                 previous_devices = current_ids
                 time.sleep(poll_interval)

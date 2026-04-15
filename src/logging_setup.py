@@ -16,7 +16,11 @@ class CSVLogFormatter(logging.Formatter):
             info = record.msg
             res = getattr(record, 'result', 'UNKNOWN')
             act = getattr(record, 'action', 'NONE')
-            return f"{info['time']},{info['name']},{info['vendor']},{info['product']},{info['id']},{res},{act}"
+            reason = getattr(record, 'reason', '')
+            return (
+                f"{info['time']},{info['name']},{info['vendor']},{info['product']}"
+                f",{info['id']},{res},{act},{reason}"
+            )
         return super().format(record)
 
 
@@ -39,7 +43,9 @@ def init_logger():
     # Ensure header exists first
     if not os.path.exists(LOG_PATH):
         with open(LOG_PATH, 'w', newline='', encoding='utf-8') as f:
-            csv.writer(f).writerow(["Time", "Device", "Vendor", "Product", "ID", "Result", "Action"])
+            csv.writer(f).writerow([
+                "Time", "Device", "Vendor", "Product", "ID", "Result", "Action", "Reason"
+            ])
     
     fh = logging.FileHandler(LOG_PATH, encoding='utf-8')
     fh.setFormatter(CSVLogFormatter())
@@ -48,6 +54,6 @@ def init_logger():
     return logger
 
 
-def log_event(logger, info, result, action):
+def log_event(logger, info, result, action, reason=""):
     """Helper to route a detection event through our logging system."""
-    logger.info(info, extra={'result': result, 'action': action})
+    logger.info(info, extra={'result': result, 'action': action, 'reason': reason})

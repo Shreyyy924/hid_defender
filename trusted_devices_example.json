@@ -1,0 +1,12 @@
+[
+  {
+    "hardware_id": "VID_046D&PID_C52B",
+    "vendor": "Logitech",
+    "name": "Logitech USB Keyboard"
+  },
+  {
+    "hardware_id": "VID_1B1C&PID_1BAC",
+    "vendor": "Standard system devices",
+    "name": "USB Input Device"
+  }
+]
