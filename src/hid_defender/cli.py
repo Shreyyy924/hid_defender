@@ -113,14 +113,22 @@ def _run_monitor(logger):
     )
     from .alert_system import play_alert_sound, show_alert, lock_workstation
 
-    def check_admin():
+    def check_admin() -> bool:
         """Check if running with elevated privileges."""
         if not IS_WINDOWS:
-            return os.geteuid() == 0
+            try:
+                return os.geteuid() == 0
+            except (OSError, AttributeError) as e:
+                logger.debug(f"Failed to check admin status on non-Windows: {e}")
+                return False
         try:
             import ctypes
-            return ctypes.windll.shell32.IsUserAnAdmin()
-        except Exception:
+            windll = getattr(ctypes, "windll", None)  # type: ignore
+            if windll:
+                return windll.shell32.IsUserAnAdmin()
+            return False
+        except (OSError, AttributeError, TypeError) as e:
+            logger.debug(f"Failed to check admin status: {e}")
             return False
 
     def kill_device(hw_id):
