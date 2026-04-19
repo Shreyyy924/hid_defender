@@ -1,7 +1,0 @@
-# HID Defender — Requirements
-
-# Core dependency: Linux udev Python bindings
-pyudev>=0.23.2
-
-# (Optional) For GUI popup alerts: install zenity via your package manager
-# sudo apt install zenity

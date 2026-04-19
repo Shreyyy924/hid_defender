@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>HID Defender Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/mini.css/3.0.1/mini-default.min.css" integrity="sha512-KCfQv1AVT8E8R6mXjfmgu0+GvW6pQILEFiz8fWxEOYpt86LX3zwIOIY3l+9dmK/wvlr1JKIGpm2BPVJjDrBb2A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+</head>
+<body>
+<div class="dashboard-container">
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <h2>🛡️ Defender</h2>
+        </div>
+        <nav class="sidebar-nav">
+            <a href="/" class="nav-item active">📊 Dashboard</a>
+            <a href="#devices" class="nav-item">📱 Devices</a>
+            <a href="#alerts" class="nav-item">⚠️ Alerts</a>
+            <a href="#logs" class="nav-item">📋 Logs</a>
+            <a href="#trusted" class="nav-item">🔐 Trusted Devices</a>
+            <a href="#settings" class="nav-item">⚙️ Settings</a>
+        </nav>
+    </aside>
+    <div class="main-content">
+        <header>
+            <div class="header-left">
+                <h1>🛡️ HID Detection and Alert Dashboard</h1>
+                <p id="status-time">Status: Active | Time: --:--:-- | Updates: <span id="update-count">0</span></p>
+            </div>
+            <div class="header-right">
+                <button id="refresh-btn" class="button">🔄 Refresh</button>
+                <button id="auto-refresh-toggle" class="button button-secondary">⏸ Auto-Refresh ON</button>
+            </div>
+        </header>
+        <main>
+            {% block content %}{% endblock %}
+        </main>
+        <footer>
+            <p>HID Defender dashboard — Live monitoring | Updates every 3 seconds</p>
+        </footer>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+</body>
+</html>
