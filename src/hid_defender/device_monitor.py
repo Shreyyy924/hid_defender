@@ -10,7 +10,7 @@ from datetime import datetime
 try:
     from .config import IS_WINDOWS, IS_MACOS, IS_LINUX
 except ImportError:
-    from config import IS_WINDOWS, IS_MACOS, IS_LINUX
+    from config import IS_WINDOWS, IS_MACOS, IS_LINUX  # type: ignore
 
 
 def get_macos_usb_devices():
