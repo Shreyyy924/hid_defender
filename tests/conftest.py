@@ -47,18 +47,10 @@ def temp_whitelist_file(tmp_path):
     """Create a temporary whitelist file for testing."""
     whitelist_path = tmp_path / "trusted_devices.json"
     sample_data = [
-        {
-            "hardware_id": "VID_1B1C&PID_1BAC",
-            "vendor": "Corsair",
-            "description": "Gaming Keyboard"
-        },
-        {
-            "hardware_id": "VID_046D&PID_C077",
-            "vendor": "Logitech",
-            "description": "USB Mouse"
-        }
+        {"hardware_id": "VID_1B1C&PID_1BAC", "vendor": "Corsair", "description": "Gaming Keyboard"},
+        {"hardware_id": "VID_046D&PID_C077", "vendor": "Logitech", "description": "USB Mouse"},
     ]
-    with open(whitelist_path, 'w') as f:
+    with open(whitelist_path, "w") as f:
         json.dump(sample_data, f)
     return whitelist_path
 
@@ -77,7 +69,7 @@ def mock_device():
         "hardware_id": "VID_DEAD&PID_BEEF",
         "vendor": "Unknown Vendor",
         "description": "Suspicious HID Device",
-        "device_type": "keyboard"
+        "device_type": "keyboard",
     }
 
 
@@ -88,7 +80,7 @@ def trusted_device():
         "hardware_id": "VID_1B1C&PID_1BAC",
         "vendor": "Corsair",
         "description": "Gaming Keyboard",
-        "device_type": "keyboard"
+        "device_type": "keyboard",
     }
 
 
@@ -96,12 +88,16 @@ def trusted_device():
 def mock_config_paths(tmp_path, monkeypatch):
     """Mock configuration paths to use temporary files."""
     # Mock the paths in config module
-    monkeypatch.setattr('hid_defender.config.WHITELIST_PATH', str(tmp_path / "trusted_devices.json"))
-    monkeypatch.setattr('hid_defender.config.LOG_PATH', str(tmp_path / "hid_alerts.log"))
+    monkeypatch.setattr(
+        "hid_defender.config.WHITELIST_PATH", str(tmp_path / "trusted_devices.json")
+    )
+    monkeypatch.setattr("hid_defender.config.LOG_PATH", str(tmp_path / "hid_alerts.log"))
 
     # Also mock in device_validator and logging_setup
-    monkeypatch.setattr('hid_defender.device_validator.WHITELIST_PATH', str(tmp_path / "trusted_devices.json"))
-    monkeypatch.setattr('hid_defender.logging_setup.LOG_PATH', str(tmp_path / "hid_alerts.log"))
+    monkeypatch.setattr(
+        "hid_defender.device_validator.WHITELIST_PATH", str(tmp_path / "trusted_devices.json")
+    )
+    monkeypatch.setattr("hid_defender.logging_setup.LOG_PATH", str(tmp_path / "hid_alerts.log"))
 
 
 @pytest.fixture

@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "hid-defender"
 version = "1.0.0"
 description = "HID Defender - Cross-Platform USB Device Security Monitor"
-readme = "docs/README.md"
+readme = "README.md"
 license = { text = "MIT" }
 authors = [{ name = "HID Defender Team" }]
 requires-python = ">=3.8"
@@ -84,7 +84,7 @@ profile = "black"
 line_length = 100
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true

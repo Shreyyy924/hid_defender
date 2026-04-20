@@ -1,0 +1,6 @@
+[flake8]
+max-line-length = 100
+extend-ignore = E203,E501
+per-file-ignores =
+    dashboard/app.py:E402
+    tests/*.py:F401,F841,E402

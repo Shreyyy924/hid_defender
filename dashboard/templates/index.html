@@ -1,145 +1,523 @@
 {% extends 'layout.html' %}
 
 {% block content %}
-<!-- Dashboard Section -->
-<section class="section active" id="dashboard">
-    <h2>📊 Dashboard Overview</h2>
-    
-    <!-- Summary Stats Cards -->
-    <div class="summary-stats" id="stats-cards">
-        <div class="stat-box" id="stat-total">
-            <h3>Total Events</h3>
-            <p class="stat-number">{{ summary.total_events }}</p>
-        </div>
-        <div class="stat-box success" id="stat-trusted">
-            <h3>Trusted</h3>
-            <p class="stat-number">{{ summary.trusted }}</p>
-        </div>
-        <div class="stat-box info" id="stat-safe">
-            <h3>Safe</h3>
-            <p class="stat-number">{{ summary.safe }}</p>
-        </div>
-        <div class="stat-box warning" id="stat-untrusted">
-            <h3>Untrusted</h3>
-            <p class="stat-number">{{ summary.untrusted }}</p>
-        </div>
-        <div class="stat-box danger" id="stat-blocked">
-            <h3>Blocked</h3>
-            <p class="stat-number">{{ summary.blocked }}</p>
-        </div>
-        <div class="stat-box" id="stat-disabled">
-            <h3>Disabled</h3>
-            <p class="stat-number">{{ summary.disabled }}</p>
-        </div>
-    </div>
-
-    <div class="monitoring-grid">
-        <!-- Alert Panel -->
-        <div class="panel alert-panel">
-            <h3>⚠️ Active Alerts (<span id="alert-count">0</span>)</h3>
-            <div class="alerts-list" id="alerts-list">
-                <p class="no-data">Loading alerts...</p>
+<div class="dashboard-container">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"></path>
+                    <path d="M12 6v6l4 2"></path>
+                </svg>
+                <span class="logo-text">HIDGuard</span>
             </div>
         </div>
 
-        <!-- Activity Logs -->
-        <div class="panel activity-panel">
-            <h3>📋 Recent Activity</h3>
-            <div class="logs-list" id="activity-list">
-                <p class="no-data">Loading activity...</p>
+        <nav class="sidebar-nav">
+            <a href="#" class="nav-item active" data-section="dashboard">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="3" width="7" height="7"></rect>
+                    <rect x="14" y="14" width="7" height="7"></rect>
+                    <rect x="3" y="14" width="7" height="7"></rect>
+                </svg>
+                <span>Overview</span>
+            </a>
+            <a href="#" class="nav-item" data-section="devices">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+                    <path d="M2 17h20"></path>
+                </svg>
+                <span>Connected Devices</span>
+            </a>
+            <a href="#" class="nav-item" data-section="alerts">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                </svg>
+                <span>Alerts</span>
+                <span class="badge" id="alert-badge">0</span>
+            </a>
+            <a href="#" class="nav-item" data-section="logs">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="12" y1="11" x2="12" y2="17"></line>
+                    <line x1="9" y1="14" x2="15" y2="14"></line>
+                </svg>
+                <span>Logs</span>
+            </a>
+            <a href="#" class="nav-item" data-section="trusted">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    <polyline points="9 12 12 15 15 9"></polyline>
+                </svg>
+                <span>Trusted Devices</span>
+            </a>
+            <a href="#" class="nav-item" data-section="tests">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 3h6"></path>
+                    <path d="M10 9h4"></path>
+                    <path d="M9 2v2"></path>
+                    <path d="M15 2v2"></path>
+                    <path d="M8 3h8l3 6-7 12h-0L5 9l3-6z"></path>
+                </svg>
+                <span>Tests</span>
+            </a>
+            <a href="#" class="nav-item" data-section="settings">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"></circle>
+                    <path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24M1 12h6m6 0h6m-16.78 7.78l4.24-4.24m5.08-5.08l4.24-4.24"></path>
+                </svg>
+                <span>Settings</span>
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="status-indicator">
+                <span class="status-dot pulse"></span>
+                <span class="status-text">System Active</span>
             </div>
         </div>
-    </div>
-</section>
+    </aside>
 
-<!-- Devices Section -->
-<section class="section" id="devices">
-    <h2>📱 Device Management</h2>
-    <div class="panel">
-        <div class="devices-grid" id="devices-grid">
-            <p class="no-data">Loading devices...</p>
-        </div>
-    </div>
-</section>
+    <!-- MAIN CONTENT -->
+    <main class="main-content">
+        <!-- HEADER -->
+        <header class="header">
+            <div class="header-left">
+                <h1>Welcome, Administrator</h1>
+                <p class="header-subtitle">System monitoring active • Last update: <span id="current-time">--:--:--</span></p>
+            </div>
+            <div class="header-search">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <path d="m21 21-4.35-4.35"></path>
+                </svg>
+                <input type="text" placeholder="Search devices, logs, alerts...">
+            </div>
+            <div class="header-icons">
+                <button class="icon-btn" title="Notifications">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg>
+                </button>
+                <div class="profile-menu">
+                    <button class="profile-btn">
+                        <span class="profile-avatar">U</span>
+                    </button>
+                </div>
+            </div>
+        </header>
 
-<!-- Alerts Section -->
-<section class="section" id="alerts">
-    <h2>⚠️ All Security Alerts</h2>
-    <div class="panel">
-        <div class="alerts-list full-width" id="alerts-full-list">
-            <p class="no-data">Loading alerts...</p>
-        </div>
-    </div>
-</section>
+        <!-- DASHBOARD SECTION -->
+        <section class="section active" id="dashboard">
+            <!-- STATUS CARDS -->
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-icon devices">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+                            <path d="M2 17h20"></path>
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Total Devices</p>
+                        <p class="stat-value" id="total-devices">--</p>
+                    </div>
+                </div>
 
-<!-- Logs Section -->
-<section class="section" id="logs">
-    <h2>📋 Detailed Event Logs</h2>
-    <div class="panel">
-        <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
-            <input type="text" id="event-filter" placeholder="🔍 Search devices, vendors, or reasons..." style="flex: 1;" />
-            <select id="result-filter" style="width: 200px;">
-                <option value="">All Results</option>
-                <option value="trusted">Trusted</option>
-                <option value="safe">Safe</option>
-                <option value="untrusted">Untrusted</option>
-            </select>
-        </div>
-        
-        <div style="overflow-x: auto;">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Time</th>
-                        <th>Device</th>
-                        <th>Vendor</th>
-                        <th>Product</th>
-                        <th>ID</th>
-                        <th>Result</th>
-                        <th>Action</th>
-                        <th>Reason</th>
-                    </tr>
-                </thead>
-                <tbody id="events-tbody">
-                    <tr><td colspan="8" class="no-data">Loading events...</td></tr>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</section>
+                <div class="stat-card">
+                    <div class="stat-icon trusted">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Trusted Devices</p>
+                        <p class="stat-value" id="trusted-count">--</p>
+                    </div>
+                </div>
 
-<!-- Trusted Devices Section -->
-<section class="section" id="trusted">
-    <h2>🔐 Trusted Devices Registry</h2>
-    <div class="panel">
-        <div id="trusted-devices-list" class="devices-grid">
-            <p class="no-data">Loading trusted devices...</p>
-        </div>
-    </div>
-</section>
+                <div class="stat-card">
+                    <div class="stat-icon suspicious">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">Suspicious Devices</p>
+                        <p class="stat-value" id="suspicious-count">--</p>
+                    </div>
+                </div>
 
-<!-- Test Cases Section -->
-<section class="section" id="tests">
-    <h2>🧪 Automated Test Execution</h2>
-    <div class="panel">
-        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Execute system tests to verify functionality of the HID Defender monitoring and detection modules.</p>
-        
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
-            <div>
-                <h3>Available Tests</h3>
-                <div id="tests-list" class="alerts-list" style="max-height: 600px; padding-right: 1rem;">
+                <div class="stat-card">
+                    <div class="stat-icon activity">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+                            <polyline points="17 6 23 6 23 12"></polyline>
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">USB Activity Rate</p>
+                        <p class="stat-value" id="activity-rate">--</p>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-icon threat">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                            <text x="12" y="13" text-anchor="middle" font-size="8" fill="currentColor">!</text>
+                        </svg>
+                    </div>
+                    <div class="stat-content">
+                        <p class="stat-label">HID Threat Level</p>
+                        <p class="stat-value" id="threat-level">--</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MAIN GRID -->
+            <div class="dashboard-grid">
+                <!-- LEFT COLUMN -->
+                <div class="dashboard-left">
+                    <!-- HID ACTIVITY TIMELINE -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>HID Activity Timeline</h3>
+                            <span class="time-range" id="activity-time-range">Awaiting activity</span>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="activity-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- DEVICE ACTIVITY LOGS TABLE -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Device Activity Logs</h3>
+                            <div class="card-controls">
+                                <input type="text" placeholder="Search..." class="search-small" id="log-search">
+                            </div>
+                        </div>
+                        <div class="table-wrapper">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Date & Time</th>
+                                        <th>Device Name</th>
+                                        <th>Vendor ID</th>
+                                        <th>Product ID</th>
+                                        <th>Detection Type</th>
+                                        <th>Action Taken</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="logs-tbody">
+                                    <tr>
+                                        <td colspan="7" class="no-data">No events recorded yet</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT COLUMN -->
+                <div class="dashboard-right">
+                    <!-- THREAT LEVEL GAUGE -->
+                    <div class="card threat-card">
+                        <div class="card-header">
+                            <h3>Threat Level Score</h3>
+                        </div>
+                        <div class="gauge-container">
+                            <svg class="gauge-svg" viewBox="0 0 200 220">
+                                <!-- Background track -->
+                                <path d="M 30 170 A 70 70 0 0 1 170 170" class="gauge-background"></path>
+                                <!-- Threat level fill -->
+                                <path d="M 30 170 A 70 70 0 0 1 170 170" class="gauge-fill" id="threat-gauge-fill" style="stroke-dasharray: 200; stroke-dashoffset: 200;"></path>
+                                <!-- Center circle -->
+                                <circle cx="100" cy="100" r="50" class="gauge-center"></circle>
+                                <text x="100" y="110" text-anchor="middle" class="gauge-value" id="threat-gauge-value">--</text>
+                                <text x="100" y="135" text-anchor="middle" class="gauge-label" id="threat-gauge-label">NO DATA</text>
+                            </svg>
+                        </div>
+                    </div>
+
+                    <!-- THREATS BY DETECTION TYPE -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Threats by Detection Type</h3>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="threat-pie-chart"></canvas>
+                        </div>
+                        <div class="chart-legend" id="threat-legend">
+                            <p class="no-data">No detection data yet</p>
+                        </div>
+                    </div>
+
+                    <!-- DEVICE RISK PANEL -->
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Device Risk Analysis</h3>
+                        </div>
+                        <div class="device-risk-list" id="device-risk-list">
+                            <p class="no-data">No device risk data yet</p>
+                        </div>
+                    </div>
+
+                    <div class="card demo-card">
+                        <div class="card-header">
+                            <h3>Demo Attack Simulation</h3>
+                        </div>
+                        <p class="demo-copy">
+                            Run a guided demo that simulates keystroke injection, unauthorized HID detection,
+                            and device disable actions, then jump straight to the logs.
+                        </p>
+                        <button class="btn-add demo-trigger" id="simulate-attacks-btn">Run Demo Attack Flow</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CONNECTED DEVICES SECTION -->
+        <section class="section" id="devices">
+            <div class="section-header">
+                <h2>Connected Devices</h2>
+                <p>Monitor all USB and HID devices currently connected to the system</p>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h3>Active Devices</h3>
+                    <input type="text" placeholder="Search devices..." class="search-small">
+                </div>
+                <div class="devices-grid" id="devices-grid">
+                    <p class="no-data">Loading devices...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ALERTS SECTION -->
+        <section class="section" id="alerts">
+            <div class="section-header">
+                <h2>Security Alerts</h2>
+                <p>All detected threats and suspicious activities</p>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h3>Active Alerts (<span id="active-alert-count">0</span>)</h3>
+                    <div class="filter-controls">
+                        <select id="alert-filter">
+                            <option value="">All Alerts</option>
+                            <option value="high">High Risk</option>
+                            <option value="medium">Medium Risk</option>
+                            <option value="low">Low Risk</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="alerts-container" id="alerts-full-list">
+                    <p class="no-data">Loading alerts...</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- LOGS SECTION -->
+        <section class="section" id="logs">
+            <div class="section-header">
+                <h2>Detailed Event Logs</h2>
+                <p>Complete history of all device detection and system events</p>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h3>Event Logs</h3>
+                    <div class="card-controls">
+                        <input type="text" placeholder="Search events..." class="search-small" id="event-search">
+                        <select id="event-filter">
+                            <option value="">All Events</option>
+                            <option value="threat">Threats</option>
+                            <option value="trusted">Trusted</option>
+                            <option value="warning">Warnings</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Device</th>
+                                <th>Vendor ID</th>
+                                <th>Product ID</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                                <th>Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="events-tbody">
+                            <tr>
+                                <td colspan="7" class="no-data">No events recorded yet</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- TRUSTED DEVICES SECTION -->
+        <section class="section" id="trusted">
+            <div class="section-header">
+                <h2>Trusted Devices</h2>
+                <p>Manage devices approved for system access</p>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h3>Trusted Device List</h3>
+                    <button class="btn-add" id="open-add-device-modal">+ Add Device</button>
+                </div>
+                <div id="trusted-devices-list" class="devices-grid">
+                    <p class="no-data">Loading devices...</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="tests">
+            <div class="section-header">
+                <h2>Test Cases</h2>
+                <p>Run automated checks from the dashboard and watch execution in real time.</p>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h3>Available Tests</h3>
+                    <button class="btn-add secondary" id="refresh-tests-btn">Refresh Tests</button>
+                </div>
+                <div id="tests-list" class="test-list">
                     <p class="no-data">Loading tests...</p>
                 </div>
             </div>
-            
-            <div>
-                <h3>Execution Results</h3>
-                <div id="test-execution-results" class="test-result-box">
-                    <p class="no-data" style="text-align: center; margin-top: 2rem;">Select a test to execute</p>
+        </section>
+
+        <!-- SETTINGS SECTION -->
+        <section class="section" id="settings">
+            <div class="section-header">
+                <h2>System Settings</h2>
+                <p>Configure HIDGuard protection and monitoring preferences</p>
+            </div>
+            <div class="settings-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Protection Settings</h3>
+                    </div>
+                    <div class="settings-form">
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <p>Block Unknown Devices</p>
+                                <p class="setting-desc">Prevent unrecognized USB/HID devices</p>
+                            </div>
+                            <div class="toggle">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <p>Fast Typing Detection</p>
+                                <p class="setting-desc">Alert on abnormal keystroke patterns</p>
+                            </div>
+                            <div class="toggle">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </div>
+                        </div>
+                        <div class="setting-item">
+                            <div class="setting-label">
+                                <p>Enable Notifications</p>
+                                <p class="setting-desc">Receive real-time threat alerts</p>
+                            </div>
+                            <div class="toggle">
+                                <input type="checkbox" checked>
+                                <span class="toggle-slider"></span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+            </div>
+        </section>
+    </main>
+</div>
+
+<div class="modal-overlay hidden" id="device-modal">
+    <div class="modal-card">
+        <div class="modal-header">
+            <div>
+                <h3>Add Trusted Device</h3>
+                <p>Select a recent device or add one manually.</p>
+            </div>
+            <button class="modal-close" data-close-modal="device-modal" aria-label="Close dialog">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="modal-section">
+                <h4>Recent Device Candidates</h4>
+                <div id="whitelist-candidates" class="modal-list">
+                    <p class="no-data">Loading candidates...</p>
+                </div>
+            </div>
+            <div class="modal-section">
+                <h4>Add Manually</h4>
+                <form id="manual-whitelist-form" class="modal-form">
+                    <input type="text" id="manual-device-id" placeholder="VID_1234&PID_ABCD" required>
+                    <input type="text" id="manual-device-vendor" placeholder="Vendor name">
+                    <input type="text" id="manual-device-product" placeholder="Product name">
+                    <button type="submit" class="btn-add">Save Trusted Device</button>
+                </form>
+            </div>
+            <p class="modal-feedback" id="device-modal-feedback"></p>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay hidden" id="attack-modal">
+    <div class="modal-card attack-modal-card">
+        <div class="modal-header">
+            <div>
+                <h3>Attack Demo Flow</h3>
+                <p>Follow the simulated attack execution and defense response.</p>
+            </div>
+            <button class="modal-close" data-close-modal="attack-modal" aria-label="Close dialog">×</button>
+        </div>
+        <div class="modal-body">
+            <div id="attack-flow" class="attack-flow">
+                <p class="no-data">No attack flow has been started yet.</p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-add secondary hidden" id="attack-open-logs">Open Logs</button>
             </div>
         </div>
     </div>
-</section>
+</div>
+
+<div class="modal-overlay hidden" id="test-run-modal">
+    <div class="modal-card attack-modal-card">
+        <div class="modal-header">
+            <div>
+                <h3 id="test-run-title">Running Test</h3>
+                <p>Live execution details from the selected test case.</p>
+            </div>
+            <button class="modal-close" data-close-modal="test-run-modal" aria-label="Close dialog">×</button>
+        </div>
+        <div class="modal-body">
+            <div id="test-run-progress" class="attack-flow">
+                <p class="no-data">No test is running.</p>
+            </div>
+            <div class="test-output-panel">
+                <pre id="test-run-output" class="test-output-text">Select a test to execute.</pre>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
