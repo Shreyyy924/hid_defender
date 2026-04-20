@@ -17,11 +17,11 @@ Usage:
         hid-defender --monitor          # Start monitoring
         hid-defender --dashboard        # Start web dashboard
         hid-defender --setup            # Configure trusted devices
-    
+
     Programmatic:
         from hid_defender.device_monitor import get_macos_usb_devices
         from hid_defender.device_validator import get_whitelist
-        
+
         devices = get_macos_usb_devices()
         whitelist = get_whitelist()
 

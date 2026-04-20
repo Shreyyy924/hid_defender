@@ -8,6 +8,7 @@ from unittest.mock import patch, MagicMock
 # Handle pynput availability
 try:
     from pynput.keyboard import Key, KeyCode
+
     PYNPUT_AVAILABLE = True
 except ImportError:
     PYNPUT_AVAILABLE = False
@@ -31,7 +32,7 @@ class TestKeystrokeMonitoring:
         # Generate 20 keystrokes in less than 1 second
         for i in range(20):
             # Simulate key press
-            monitor.on_press(KeyCode.from_char('a'))
+            monitor.on_press(KeyCode.from_char("a"))
             time.sleep(0.01)  # 10ms delay = 100 keys/sec
 
         # Check if rapid typing was detected
@@ -46,19 +47,19 @@ class TestKeystrokeMonitoring:
 
         # Simulate normal human typing (5-10 keys/sec)
         for i in range(10):
-            monitor.on_press(KeyCode.from_char('h'))
-            monitor.on_press(KeyCode.from_char('e'))
-            monitor.on_press(KeyCode.from_char('l'))
-            monitor.on_press(KeyCode.from_char('l'))
-            monitor.on_press(KeyCode.from_char('o'))
+            monitor.on_press(KeyCode.from_char("h"))
+            monitor.on_press(KeyCode.from_char("e"))
+            monitor.on_press(KeyCode.from_char("l"))
+            monitor.on_press(KeyCode.from_char("l"))
+            monitor.on_press(KeyCode.from_char("o"))
             time.sleep(0.2)  # 200ms delay = ~5 keys/sec
 
         # Should not detect rapid typing
         assert not monitor.rapid_typing_detected
         assert monitor.keystroke_count < 15
 
-    @patch('hid_defender.keystroke_monitor.contextlib.redirect_stderr')
-    @patch('hid_defender.keystroke_monitor.pynput.keyboard.Listener')
+    @patch("hid_defender.keystroke_monitor.contextlib.redirect_stderr")
+    @patch("hid_defender.keystroke_monitor.pynput.keyboard.Listener")
     def test_keystroke_monitor_macos_permissions(self, mock_listener, mock_redirect):
         """Test macOS accessibility permissions handling."""
         from hid_defender.keystroke_monitor import KeystrokeMonitor
@@ -80,7 +81,7 @@ class TestKeystrokeMonitoring:
         monitor = KeystrokeMonitor()
 
         # Verify threshold is properly set from config
-        assert hasattr(monitor, 'threshold')
+        assert hasattr(monitor, "threshold")
         assert monitor.threshold == KEYSTROKE_THRESHOLD
 
     def test_keystroke_reset_mechanism(self):
@@ -91,7 +92,7 @@ class TestKeystrokeMonitoring:
 
         # Generate some keystrokes
         for i in range(5):
-            monitor.on_press(KeyCode.from_char('a'))
+            monitor.on_press(KeyCode.from_char("a"))
 
         initial_count = monitor.keystroke_count
         assert initial_count == 5
@@ -100,7 +101,7 @@ class TestKeystrokeMonitoring:
         monitor.last_reset_time = time.time() - 10  # 10 seconds ago
 
         # Next keystroke should trigger reset due to time window
-        monitor.on_press(KeyCode.from_char('a'))
+        monitor.on_press(KeyCode.from_char("a"))
 
         # Count should be reset or lower
         assert monitor.keystroke_count <= initial_count

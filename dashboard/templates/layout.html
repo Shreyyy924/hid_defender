@@ -1,68 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>HID Defender Dashboard</title>
-    <!-- Modern premium fonts loaded in styles.css -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="HID Defender - USB Device Security Monitor Dashboard">
+    <title>HID Defender Dashboard - Security Operations</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-<div class="dashboard-container">
-    <!-- Glassmorphic Sidebar -->
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <h2>🛡️ Defender</h2>
-        </div>
-        <nav class="sidebar-nav">
-            <a href="#dashboard" class="nav-item active" data-section="dashboard">📊 Dashboard</a>
-            <a href="#devices" class="nav-item" data-section="devices">📱 Devices</a>
-            <a href="#alerts" class="nav-item" data-section="alerts">⚠️ Alerts</a>
-            <a href="#logs" class="nav-item" data-section="logs">📋 Logs</a>
-            <a href="#trusted" class="nav-item" data-section="trusted">🔐 Trusted Devices</a>
-            <a href="#tests" class="nav-item" data-section="tests">🧪 Test Cases</a>
-            <a href="#settings" class="nav-item" data-section="settings">⚙️ Settings</a>
-        </nav>
-    </aside>
+    {% block content %}{% endblock %}
     
-    <!-- Main Content Panel -->
-    <div class="main-content">
-        <header>
-            <div class="header-left">
-                <h1>HID Detection & Alert System</h1>
-                <p id="status-time"><span class="status-active"></span>Active | Updates: <span id="update-count">0</span> | Last refresh: --:--:--</p>
-            </div>
-            <div class="header-right">
-                <button id="refresh-btn" class="button button-secondary">🔄 Refresh</button>
-                <button id="simulate-attack-btn" class="button danger-btn" style="background: var(--danger); box-shadow: 0 4px 15px var(--danger-glow);">🚨 Simulate Attack</button>
-            </div>
-        </header>
-        
-        <main>
-            {% block content %}{% endblock %}
-        </main>
-        
-        <footer>
-            <p>HID Defender v1.0 — Real-time continuous monitoring</p>
-        </footer>
-    </div>
-</div>
-
-<!-- Simulation Modal -->
-<div id="simulation-modal" class="modal-overlay hidden">
-    <div class="modal-content glass-panel">
-        <div class="modal-header">
-            <h2>🚨 Attack Simulation in Progress</h2>
-        </div>
-        <div class="modal-body" id="simulation-body">
-            <!-- Simulated attacks will appear here -->
-        </div>
-        <div class="modal-footer">
-            <button id="close-simulation-btn" class="button hidden" style="width: 100%;">View Logs</button>
-        </div>
-    </div>
-</div>
-
-<script src="{{ url_for('static', filename='dashboard.js') }}"></script>
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
 </body>
 </html>

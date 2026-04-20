@@ -1,7 +1,15 @@
 [
-    {
-        "hardware_id": "VID_1B1C&PID_1BAC",
-        "vendor": "(Standard system devices)",
-        "description": "USB Input Device"
-    }
+  {
+    "hardware_id": "VID_1B1C&PID_1BAC",
+    "vendor": "(Standard system devices)",
+    "description": "USB Input Device"
+  },
+  {
+    "hardware_id": "VID_2E8A&PID_0003",
+    "id": "VID_2E8A&PID_0003",
+    "vendor": "Raspberry Pi",
+    "product": "RP2040",
+    "name": "USB Device",
+    "added_at": "2026-04-20T21:56:04.463414"
+  }
 ]

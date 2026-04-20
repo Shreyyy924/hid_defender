@@ -19,14 +19,15 @@ class TestSystemStartup:
         log_file = tmp_path / "hid_alerts.log"
 
         # Create empty whitelist
-        with open(whitelist_file, 'w') as f:
+        with open(whitelist_file, "w") as f:
             json.dump([], f)
 
         # Mock the paths
-        with patch('hid_defender.config.WHITELIST_PATH', str(whitelist_file)), \
-             patch('hid_defender.config.LOG_PATH', str(log_file)), \
-             patch('hid_defender.device_validator.WHITELIST_PATH', str(whitelist_file)), \
-             patch('hid_defender.logging_setup.LOG_PATH', str(log_file)):
+        with patch("hid_defender.config.WHITELIST_PATH", str(whitelist_file)), patch(
+            "hid_defender.config.LOG_PATH", str(log_file)
+        ), patch("hid_defender.device_validator.WHITELIST_PATH", str(whitelist_file)), patch(
+            "hid_defender.logging_setup.LOG_PATH", str(log_file)
+        ):
 
             # Import after patching
             from hid_defender.logging_setup import init_logger
@@ -47,22 +48,22 @@ class TestSystemStartup:
 
     def test_tc12_whitelist_file_loading_success(self, temp_whitelist_file):
         """TC-12: Verify that whitelist file loads properly during startup."""
-        with patch('hid_defender.device_validator.WHITELIST_PATH', str(temp_whitelist_file)):
+        with patch("hid_defender.device_validator.WHITELIST_PATH", str(temp_whitelist_file)):
             from hid_defender.device_validator import get_whitelist
 
             whitelist = get_whitelist()
             assert len(whitelist) == 2
-            assert whitelist[0]['hardware_id'] == 'VID_1B1C&PID_1BAC'
-            assert whitelist[1]['hardware_id'] == 'VID_046D&PID_C077'
+            assert whitelist[0]["hardware_id"] == "VID_1B1C&PID_1BAC"
+            assert whitelist[1]["hardware_id"] == "VID_046D&PID_C077"
 
     def test_tc13_invalid_whitelist_entry_handling(self, tmp_path):
         """TC-13: Verify system handling of wrong whitelist data."""
         # Create invalid JSON file
         invalid_whitelist = tmp_path / "invalid_trusted_devices.json"
-        with open(invalid_whitelist, 'w') as f:
+        with open(invalid_whitelist, "w") as f:
             f.write("invalid json content {")
 
-        with patch('hid_defender.device_validator.WHITELIST_PATH', str(invalid_whitelist)):
+        with patch("hid_defender.device_validator.WHITELIST_PATH", str(invalid_whitelist)):
             from hid_defender.device_validator import get_whitelist
 
             # Should handle error gracefully and return empty list
@@ -72,11 +73,11 @@ class TestSystemStartup:
 
     def test_tc19_system_stability_repeated_tests(self, temp_whitelist_file):
         """TC-19: Verify that the system does not crash during repeated testing."""
-        with patch('hid_defender.device_validator.WHITELIST_PATH', str(temp_whitelist_file)):
+        with patch("hid_defender.device_validator.WHITELIST_PATH", str(temp_whitelist_file)):
             from hid_defender.device_validator import get_whitelist
 
             # Run multiple times to test stability
             for i in range(10):
                 whitelist = get_whitelist()
                 assert len(whitelist) == 2
-                assert whitelist[0]['hardware_id'] == 'VID_1B1C&PID_1BAC'
+                assert whitelist[0]["hardware_id"] == "VID_1B1C&PID_1BAC"
