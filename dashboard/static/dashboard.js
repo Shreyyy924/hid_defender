@@ -17,9 +17,10 @@ class DashboardUpdater {
     init() {
         this.setupNavigation();
         this.setupEventListeners();
-        this.refreshAll();
         this.updateClock();
+        this.refreshAll();
         setInterval(() => this.updateClock(), 1000);
+        setInterval(() => this.refreshAll(), 30000); // Auto-refresh every 30s
     }
 
     setupNavigation() {
@@ -54,13 +55,43 @@ class DashboardUpdater {
         // Refresh button
         const refreshBtn = document.getElementById('refresh-btn');
         if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => this.refreshAll());
+            refreshBtn.addEventListener('click', () => {
+                refreshBtn.classList.add('spinning');
+                const originalText = refreshBtn.innerHTML;
+                refreshBtn.innerHTML = '⌛ Refreshing...';
+                
+                this.refreshAll().then(() => {
+                    setTimeout(() => {
+                        refreshBtn.classList.remove('spinning');
+                        refreshBtn.innerHTML = originalText;
+                    }, 500);
+                });
+            });
         }
 
         // Simulate Attack button
         const simulateBtn = document.getElementById('simulate-attack-btn');
         if (simulateBtn) {
             simulateBtn.addEventListener('click', () => this.simulateAttack(simulateBtn));
+        }
+
+        // Settings - Add Trusted Form
+        const addTrustedForm = document.getElementById('add-trusted-form');
+        if (addTrustedForm) {
+            addTrustedForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.addTrustedDevice();
+            });
+        }
+
+        // Settings - Clear Logs
+        const clearLogsBtn = document.getElementById('clear-logs-btn');
+        if (clearLogsBtn) {
+            clearLogsBtn.addEventListener('click', () => {
+                if (confirm('Are you sure you want to clear all security logs? This action cannot be undone.')) {
+                    this.clearLogs();
+                }
+            });
         }
 
         // Event filter
@@ -181,12 +212,13 @@ class DashboardUpdater {
     }
 
     refreshAll() {
-        Promise.all([
+        return Promise.all([
             this.updateStats(),
             this.updateAlerts(),
             this.updateActivity(),
             this.updateDevices(),
-            this.updateEvents()
+            this.updateEvents(),
+            this.updateTrustedDevices()
         ]).catch(err => console.error('Update error:', err));
     }
 
@@ -343,6 +375,7 @@ class DashboardUpdater {
                 return (
                     (event.device || '').toLowerCase().includes(searchText) ||
                     (event.vendor || '').toLowerCase().includes(searchText) ||
+                    (event.action || '').toLowerCase().includes(searchText) ||
                     (event.reason || '').toLowerCase().includes(searchText)
                 );
             });
@@ -496,6 +529,118 @@ class DashboardUpdater {
             btnElement.disabled = false;
             btnElement.style.opacity = '1';
         });
+    }
+
+    updateTrustedDevices() {
+        return fetch('/api/whitelist')
+            .then(res => res.json())
+            .then(data => {
+                const trustedList = document.getElementById('trusted-devices-list');
+                const trustedBadge = document.getElementById('trusted-count-badge');
+                
+                if (trustedBadge) {
+                    trustedBadge.textContent = `${data.total || 0} Devices`;
+                }
+
+                if (!trustedList) return;
+
+                if (!data.whitelist || data.whitelist.length === 0) {
+                    trustedList.innerHTML = '<p class="no-data">No trusted devices registered</p>';
+                    return;
+                }
+
+                trustedList.innerHTML = data.whitelist.map(device => `
+                    <div class="stat-box trusted-card fade-in">
+                        <div style="display: flex; justify-content: space-between; align-items: start;">
+                            <h4 style="color: #fff; margin-bottom: 0.8rem; font-size: 1.1rem;"><code>${device.id}</code></h4>
+                            <button class="delete-trusted-btn" data-id="${device.id}" title="Remove from Whitelist">✕</button>
+                        </div>
+                        <p style="color: var(--text-muted); margin-bottom: 0.4rem;"><strong>Device:</strong> ${device.device || 'N/A'}</p>
+                        <p style="color: var(--text-muted); margin-bottom: 0.4rem;"><strong>Vendor:</strong> ${device.vendor || 'N/A'}</p>
+                        <p style="color: var(--text-muted); margin-bottom: 0.4rem;"><strong>Product:</strong> ${device.product || 'N/A'}</p>
+                        <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 1rem;">Added: ${device.added || 'N/A'}</p>
+                    </div>
+                `).join('');
+
+                // Add delete listeners
+                document.querySelectorAll('.delete-trusted-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const id = btn.getAttribute('data-id');
+                        if (confirm(`Remove device ${id} from trusted list?`)) {
+                            this.deleteTrustedDevice(id);
+                        }
+                    });
+                });
+            });
+    }
+
+    addTrustedDevice() {
+        const form = document.getElementById('add-trusted-form');
+        const messageEl = document.getElementById('form-message');
+        const submitBtn = form.querySelector('button[type="submit"]');
+
+        const data = {
+            id: document.getElementById('device-hw-id').value,
+            device: document.getElementById('device-name').value,
+            vendor: document.getElementById('device-vendor').value,
+            product: document.getElementById('device-product').value
+        };
+
+        submitBtn.disabled = true;
+        submitBtn.textContent = '⌛ Saving...';
+
+        fetch('/api/whitelist/add', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                messageEl.innerHTML = `<span style="color: var(--success)">${data.message}</span>`;
+                form.reset();
+                this.updateTrustedDevices();
+                setTimeout(() => messageEl.innerHTML = '', 3000);
+            } else {
+                messageEl.innerHTML = `<span style="color: var(--danger)">${data.error}</span>`;
+            }
+        })
+        .catch(err => {
+            messageEl.innerHTML = `<span style="color: var(--danger)">Error: ${err.message}</span>`;
+        })
+        .finally(() => {
+            submitBtn.disabled = false;
+            submitBtn.textContent = '➕ Add to Whitelist';
+        });
+    }
+
+    deleteTrustedDevice(id) {
+        fetch('/api/whitelist/delete', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: id })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                this.updateTrustedDevices();
+            } else {
+                alert('Error: ' + data.error);
+            }
+        });
+    }
+
+    clearLogs() {
+        fetch('/api/logs/clear', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    this.refreshAll();
+                    alert('Security logs cleared successfully.');
+                } else {
+                    alert('Error clearing logs: ' + data.error);
+                }
+            });
     }
 
     animateUpdate(element) {

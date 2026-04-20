@@ -288,6 +288,94 @@ def api_alerts():
     })
 
 
+@app.route("/api/whitelist")
+def api_whitelist():
+    """API endpoint for the trusted devices whitelist."""
+    whitelist = load_whitelist()
+    return jsonify({
+        "whitelist": whitelist,
+        "total": len(whitelist),
+        "timestamp": datetime.now().isoformat()
+    })
+
+
+@app.route("/api/whitelist/add", methods=["POST"])
+def api_add_trusted():
+    """API endpoint to add a device to the trusted whitelist."""
+    data = request.get_json()
+    hw_id = data.get("id")
+    device_name = data.get("device", "Unknown Device")
+    vendor = data.get("vendor", "Unknown Vendor")
+    product = data.get("product", "Unknown Product")
+    
+    if not hw_id:
+        return jsonify({"success": False, "error": "Hardware ID (VID/PID) is required"}), 400
+        
+    whitelist = load_whitelist()
+    
+    # Check if already exists
+    for entry in whitelist:
+        if entry.get("id") == hw_id:
+            return jsonify({"success": False, "error": "Device already in whitelist"}), 400
+            
+    # Add new entry
+    new_entry = {
+        "id": hw_id,
+        "device": device_name,
+        "vendor": vendor,
+        "product": product,
+        "added": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    }
+    whitelist.append(new_entry)
+    
+    try:
+        whitelist_path = Path(WHITELIST_PATH)
+        whitelist_path.parent.mkdir(parents=True, exist_ok=True)
+        with whitelist_path.open("w", encoding="utf-8") as f:
+            json.dump(whitelist, f, indent=4)
+        return jsonify({"success": True, "message": f"Added {device_name} to whitelist"})
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Failed to save whitelist: {str(e)}"}), 500
+
+
+@app.route("/api/whitelist/delete", methods=["POST"])
+def api_delete_trusted():
+    """API endpoint to remove a device from the trusted whitelist."""
+    data = request.get_json()
+    hw_id = data.get("id")
+    
+    if not hw_id:
+        return jsonify({"success": False, "error": "Hardware ID required"}), 400
+        
+    whitelist = load_whitelist()
+    new_whitelist = [entry for entry in whitelist if entry.get("id") != hw_id]
+    
+    if len(new_whitelist) == len(whitelist):
+        return jsonify({"success": False, "error": "Device not found in whitelist"}), 404
+        
+    try:
+        with open(WHITELIST_PATH, "w", encoding="utf-8") as f:
+            json.dump(new_whitelist, f, indent=4)
+        return jsonify({"success": True, "message": "Device removed from whitelist"})
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Failed to save whitelist: {str(e)}"}), 500
+
+
+@app.route("/api/logs/clear", methods=["POST"])
+def api_clear_logs():
+    """API endpoint to clear the alert logs."""
+    try:
+        log_path = Path(LOG_PATH)
+        if log_path.exists():
+            # Keep header if CSV
+            with log_path.open("w", encoding="utf-8", newline="") as f:
+                writer = csv.writer(f)
+                writer.writerow(["Time", "Device", "Vendor", "Product", "ID", "Result", "Action", "Reason"])
+        return jsonify({"success": True, "message": "Logs cleared successfully"})
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Failed to clear logs: {str(e)}"}), 500
+
+
 @app.route("/api/devices")
 def api_devices():
     """API endpoint for device information."""

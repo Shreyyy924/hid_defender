@@ -77,7 +77,7 @@
     <h2>📋 Detailed Event Logs</h2>
     <div class="panel">
         <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
-            <input type="text" id="event-filter" placeholder="🔍 Search devices, vendors, or reasons..." style="flex: 1;" />
+            <input type="text" id="event-filter" placeholder="🔍 Search devices, vendors, actions, or reasons..." style="flex: 1;" />
             <select id="result-filter" style="width: 200px;">
                 <option value="">All Results</option>
                 <option value="trusted">Trusted</option>
@@ -110,10 +110,71 @@
 
 <!-- Trusted Devices Section -->
 <section class="section" id="trusted">
-    <h2>🔐 Trusted Devices Registry</h2>
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2>🔐 Trusted Devices Registry</h2>
+        <span class="badge trusted" id="trusted-count-badge">0 Devices</span>
+    </div>
     <div class="panel">
         <div id="trusted-devices-list" class="devices-grid">
             <p class="no-data">Loading trusted devices...</p>
+        </div>
+    </div>
+</section>
+
+<!-- Settings Section -->
+<section class="section" id="settings">
+    <h2>⚙️ System Settings</h2>
+    
+    <div class="monitoring-grid" style="grid-template-columns: 1fr 1fr;">
+        <!-- Whitelist Management Form -->
+        <div class="panel">
+            <h3>🔐 Add Trusted Device</h3>
+            <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.9rem;">Register a device manually by its hardware identification string (VID_PID).</p>
+            
+            <form id="add-trusted-form">
+                <div class="form-group">
+                    <label for="device-hw-id">Hardware ID (e.g., VID_046D&PID_C077)</label>
+                    <input type="text" id="device-hw-id" placeholder="USB\VID_XXXX&PID_XXXX" required />
+                </div>
+                <div class="form-group">
+                    <label for="device-name">Friendly Name</label>
+                    <input type="text" id="device-name" placeholder="My Mouse" required />
+                </div>
+                <div class="form-group">
+                    <label for="device-vendor">Vendor Name</label>
+                    <input type="text" id="device-vendor" placeholder="Logitech" />
+                </div>
+                <div class="form-group">
+                    <label for="device-product">Product Name</label>
+                    <input type="text" id="device-product" placeholder="G403 Prodigy" />
+                </div>
+                <button type="submit" class="button" style="width: 100%; margin-top: 1rem;">➕ Add to Whitelist</button>
+            </form>
+            <div id="form-message" style="margin-top: 1rem; font-size: 0.9rem;"></div>
+        </div>
+
+        <!-- System Actions -->
+        <div class="panel">
+            <h3>🛠️ Maintenance Actions</h3>
+            <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.9rem;">Perform administrative tasks on the system database and logs.</p>
+            
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div class="action-card">
+                    <div>
+                        <h4 style="margin: 0;">Clear Security Logs</h4>
+                        <p style="margin: 0.2rem 0 0; font-size: 0.85rem; color: var(--text-muted);">Permanently delete all detected HID alerts from history.</p>
+                    </div>
+                    <button id="clear-logs-btn" class="button danger-btn">🗑️ Clear Logs</button>
+                </div>
+
+                <div class="action-card">
+                    <div>
+                        <h4 style="margin: 0;">Reset Device Baseline</h4>
+                        <p style="margin: 0.2rem 0 0; font-size: 0.85rem; color: var(--text-muted);">Clear and re-generate a base whitelist from currently connected devices.</p>
+                    </div>
+                    <button id="reset-baseline-btn" class="button button-secondary" disabled>🔄 Reset Baseline</button>
+                </div>
+            </div>
         </div>
     </div>
 </section>
