@@ -205,7 +205,7 @@ If `pynput` installation fails, install separately:
 ```bash
 pip install pynput
 ```
-
+/Users/veel/hid_defender/pyproject.toml
 ---
 
 ## ⚡ Quick Start
