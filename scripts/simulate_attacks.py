@@ -57,6 +57,16 @@ def simulate_attacks():
             "Result": "UNTRUSTED",
             "Action": "DISABLED",
             "Reason": "Suspicious Interface Descriptors (Mouse acting as Keyboard)"
+        },
+        {
+            "Event": "Device Monitor",
+            "Device": "Raspberry Pi Pico (BadUSB)",
+            "Vendor": "2e8a",
+            "Product": "0003",
+            "ID": "USB_2E8A_0003",
+            "Result": "UNTRUSTED",
+            "Action": "BLOCKED",
+            "Reason": "Known Attack Vector (Raspberry Pi Pico)"
         }
     ]
 

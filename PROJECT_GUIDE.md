@@ -6,13 +6,13 @@ This guide explains the design and usage of the HID Defense module for your fina
 The system follows an event-driven model aimed at detecting and neutralizing HID-based attacks (Rubber Ducky, Raspberry Pi Pico).
 
 1.  **USB Discovery Layer**: Uses Windows Management Instrumentation (WMI) to listen for `__InstanceCreationEvent` notifications when a new PNP device (keyboard/mouse) is plugged in.
-2.  **Validation Layer**: Extracts the Hardware ID (VID/PID) and compares it against `whitelist.json`.
+2.  **Validation Layer**: Extracts the Hardware ID (VID/PID) and compares it against `data/trusted_devices.json`.
 3.  **Behavioral Layer**: If a device is unknown, the system starts monitoring its keystroke behavior using a low-level keyboard hook (`pynput`).
 4.  **Enforcement Layer**: If thresholds are exceeded (speed, delay, patterns), system alerts are triggered (sound, console warnings, or workstation locking).
 
 ## 📂 File Structure
-- `simple_defender.py`: The core logic and main execution script.
-- `whitelist.json`: Data file containing trusted device profiles.
+- `src/hid_defender`: The core modular logic and execution module.
+- `data/trusted_devices.json`: Data file containing trusted device profiles.
 - `hid_alerts.csv`: Audit logs for demonstration and reporting.
 
 ## ⚙️ Key Requirements & Libraries
@@ -24,8 +24,8 @@ The system follows an event-driven model aimed at detecting and neutralizing HID
 ## 🧪 Demo Scenarios
 
 ### Scenario 1: Whitelist Protection (Safe Device)
-1.  Add your current keyboard's VID/PID to `whitelist.json`.
-2.  Run `python simple_defender.py`.
+1.  Add your current keyboard's VID/PID to `data/trusted_devices.json`.
+2.  Run `hid-defender --monitor`.
 3.  Plug in the keyboard.
 4.  **Result**: Console shows "[v] Device Trusted".
 

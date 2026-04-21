@@ -28,7 +28,7 @@ class TestAlertSystem:
         mock_subprocess.assert_called_once()
         call_args = mock_subprocess.call_args[0][0]
         assert 'osascript' in call_args
-        assert 'display notification' in ' '.join(call_args)
+        assert 'display dialog' in ' '.join(call_args)
 
     def test_alert_generation_windows(self, monkeypatch):
         """Test alert generation on Windows."""
@@ -82,12 +82,16 @@ class TestAlertSystem:
         # Verify winsound.Beep was called
         mock_winsound.Beep.assert_called_once()
 
-    def test_lock_workstation_not_implemented(self):
-        """Test that lock_workstation raises NotImplementedError."""
+    def test_lock_workstation_not_supported(self, monkeypatch):
+        """Test that lock_workstation returns False on unsupported platforms."""
+        monkeypatch.setattr('hid_defender.alert_system.IS_WINDOWS', False)
+        monkeypatch.setattr('hid_defender.alert_system.IS_MACOS', False)
+        monkeypatch.setattr('hid_defender.alert_system.IS_LINUX', False)
+
         from hid_defender.alert_system import lock_workstation
 
-        with pytest.raises(NotImplementedError):
-            lock_workstation()
+        result = lock_workstation()
+        assert result is False
 
     def test_alert_message_formatting(self, monkeypatch):
         """Test that alert messages are properly formatted."""

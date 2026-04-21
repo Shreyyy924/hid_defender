@@ -4,7 +4,7 @@
 > This repository contains a simplified, Windows-focused HID Defense Module designed for a Final Year Project. 
 > 
 > **Quick Start:** 
-> 1. Run `python simple_defender.py` to start the core defense system.
+> 1. Run `hid-defender --monitor` to start the core defense system.
 > 2. Follow the **[PROJECT_GUIDE.md](PROJECT_GUIDE.md)** for architecture and demo instructions.
 
 ---
