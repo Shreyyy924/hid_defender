@@ -4,7 +4,10 @@
 
 import subprocess
 import json
+import threading
+import time
 from datetime import datetime
+from typing import List, Dict, Callable, Optional, Any
 
 # Handle both package imports and standalone execution
 try:
@@ -116,3 +119,98 @@ def _parse_windows_device(dev):
         "product": prod,
         "id": pnp_id
     }
+
+
+class BackgroundDeviceMonitor:
+    """Non-blocking background device monitor with caching."""
+    
+    def __init__(self, callback: Optional[Callable[[List[Dict[str, Any]]], None]] = None, 
+                 scan_interval: float = 2.0, cache_ttl: float = 1.0, wmi_client: Optional[Any] = None):
+        """
+        Initialize the background device monitor.
+        
+        Args:
+            callback: Function to call with new devices when they change
+            scan_interval: How often to scan for devices (seconds)
+            cache_ttl: How long to cache device list before forcing refresh (seconds)
+            wmi_client: Windows WMI client (optional)
+        """
+        self.callback = callback
+        self.scan_interval = scan_interval
+        self.cache_ttl = cache_ttl
+        self.wmi_client = wmi_client
+        
+        self.is_running = False
+        self.thread: Optional[threading.Thread] = None
+        
+        # Device caching
+        self._cached_devices: List[Dict[str, Any]] = []
+        self._last_scan_time: float = 0.0
+        self._device_ids_seen: set = set()
+        self._lock = threading.Lock()
+    
+    def start(self) -> None:
+        """Start the background monitoring thread."""
+        if self.is_running:
+            return
+        
+        self.is_running = True
+        self.thread = threading.Thread(target=self._monitoring_loop, daemon=True)
+        self.thread.start()
+    
+    def stop(self) -> None:
+        """Stop the background monitoring thread."""
+        self.is_running = False
+        if self.thread:
+            self.thread.join(timeout=5)
+    
+    def _monitoring_loop(self) -> None:
+        """Main monitoring loop running in background thread."""
+        while self.is_running:
+            try:
+                devices = self._get_devices_with_cache()
+                
+                # Detect new devices
+                current_ids = {d['id'] for d in devices}
+                new_ids = current_ids - self._device_ids_seen
+                
+                if new_ids and self.callback:
+                    # Call callback with only new devices
+                    new_devices = [d for d in devices if d['id'] in new_ids]
+                    self.callback(new_devices)
+                
+                self._device_ids_seen = current_ids
+                
+            except Exception as e:
+                print(f"Error in device monitoring loop: {e}")
+            
+            time.sleep(self.scan_interval)
+    
+    def _get_devices_with_cache(self) -> List[Dict[str, Any]]:
+        """Get devices, using cache if still valid."""
+        now = time.time()
+        
+        with self._lock:
+            # Use cache if it's still fresh
+            if self._cached_devices and (now - self._last_scan_time) < self.cache_ttl:
+                return self._cached_devices
+        
+        # Perform actual scan
+        if IS_MACOS:
+            devices = get_macos_usb_devices()
+        elif IS_WINDOWS and self.wmi_client:
+            devices = get_windows_usb_devices(self.wmi_client)
+        else:
+            devices = []
+        
+        # Update cache
+        with self._lock:
+            self._cached_devices = devices
+            self._last_scan_time = now
+        
+        return devices
+    
+    def get_current_devices(self) -> List[Dict[str, Any]]:
+        """Get the currently cached device list."""
+        with self._lock:
+            return list(self._cached_devices)

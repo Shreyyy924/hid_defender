@@ -106,12 +106,12 @@ def _run_monitor(logger):
     )
     from .logging_setup import log_event
     from .keystroke_monitor import KeystrokeMonitor, PYNPUT_AVAILABLE
-    from .device_monitor import get_macos_usb_devices
+    from .device_monitor import BackgroundDeviceMonitor
     from .device_validator import (
         get_whitelist, parse_device, 
         evaluate, should_debounce
     )
-    from .alert_system import play_alert_sound, show_alert, lock_workstation
+    from .alert_system import play_alert_sound, show_alert, lock_workstation, eject_usb_device
 
     def check_admin() -> bool:
         """Check if running with elevated privileges."""
@@ -167,23 +167,52 @@ def _run_monitor(logger):
         elif result == "SAFE":
             logger.info(f"Safe device: {info['name']}")
         else:  # UNTRUSTED
-            logger.warning(f"UNTRUSTED DEVICE DETECTED: {info['id']}")
+            logger.warning(f"🚨 UNTRUSTED DEVICE DETECTED: {info['id']}")
+            
+            # ===== SECURITY RESPONSE =====
+            # 1. Play alert sound
             play_alert_sound()
             
+            # 2. Show critical alert to user
+            try:
+                show_alert(info)
+            except Exception as e:
+                logger.error(f"Failed to show alert: {e}")
+            
+            # 3. Register with keystroke monitor for first-input delay detection
             if keystroke_mon:
                 keystroke_mon.register_device_connection(info)
             
-            if IS_WINDOWS:
-                try:
-                    logger.info("Locking workstation...")
-                    if lock_workstation():
-                        action = "LOCKED"
-                except Exception as e:
-                    logger.error(f"Failed to lock workstation: {e}")
+            # 4. Lock the workstation on all platforms
+            try:
+                logger.info("🔒 Locking workstation...")
+                if lock_workstation():
+                    logger.warning("✓ Workstation locked successfully")
+                    action = "LOCKED"
+            except Exception as e:
+                logger.error(f"Failed to lock workstation: {e}")
             
-            if check_admin():
-                action = "DISABLED"
-                kill_device(info['id'])
+            # 5. Eject/disable the device
+            try:
+                logger.info("⏏️  Ejecting malicious USB device...")
+                from .alert_system import eject_usb_device
+                if eject_usb_device(info['id']):
+                    logger.warning("✓ USB device ejected successfully")
+                    action = "EJECTED"
+                else:
+                    logger.warning("⚠️  Could not eject device, will attempt to disable...")
+                    # Fallback on Windows: disable the device
+                    if IS_WINDOWS and check_admin():
+                        if kill_device(info['id']):
+                            action = "DISABLED"
+            except Exception as e:
+                logger.error(f"Failed to eject device: {e}")
+
+
+    def device_callback(new_devices):
+        """Callback when new devices are detected."""
+        for dev in new_devices:
+            handle_event(dev, whitelist, keystroke_mon)
 
     # Initialize monitoring
     logger.info(f"HID Defender {platform.system()} {platform.release()}")
@@ -198,19 +227,32 @@ def _run_monitor(logger):
     
     logger.info("Monitoring started. Press Ctrl+C to stop.")
     
-    if IS_MACOS:
-        # macOS monitoring loop
+    # Start background device monitor
+    wmi_client = None
+    if IS_WINDOWS:
+        try:
+            import wmi
+            wmi_client = wmi.WMI()
+        except Exception as e:
+            logger.warning(f"Could not initialize WMI: {e}")
+    
+    monitor = BackgroundDeviceMonitor(
+        callback=device_callback,
+        scan_interval=2.0,
+        cache_ttl=1.0,
+        wmi_client=wmi_client
+    )
+    monitor.start()
+    logger.info("Background device monitor started (non-blocking)")
+    
+    try:
+        # Main thread stays responsive for Ctrl+C
         while True:
-            try:
-                devices = get_macos_usb_devices()
-                # Process devices...
-                time.sleep(2)
-            except KeyboardInterrupt:
-                break
-            except Exception as e:
-                logger.error(f"Monitoring error: {e}")
-    else:
-        logger.warning(f"Monitoring not fully implemented for {platform.system()}")
+            time.sleep(0.5)
+    except KeyboardInterrupt:
+        logger.info("Shutting down...")
+    finally:
+        monitor.stop()
     
     return 0
 
