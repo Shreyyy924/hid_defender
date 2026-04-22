@@ -10,28 +10,31 @@
         <div class="stat-box" id="stat-total">
             <h3>Total Events</h3>
             <p class="stat-number">{{ summary.total_events }}</p>
+            <p style="font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem">all USB detections</p>
         </div>
         <div class="stat-box success" id="stat-trusted">
-            <h3>Trusted</h3>
+            <h3>Trusted Connections</h3>
             <p class="stat-number">{{ summary.trusted }}</p>
+            <p style="font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem">{{ summary.unique_devices }} unique device(s) registered</p>
         </div>
-        <div class="stat-box info" id="stat-safe">
-            <h3>Safe</h3>
-            <p class="stat-number">{{ summary.safe }}</p>
-        </div>
+
         <div class="stat-box warning" id="stat-untrusted">
-            <h3>Untrusted</h3>
+            <h3>Threats Detected</h3>
             <p class="stat-number">{{ summary.untrusted }}</p>
+            <p style="font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem">untrusted / attack devices</p>
         </div>
         <div class="stat-box danger" id="stat-blocked">
             <h3>Blocked</h3>
             <p class="stat-number">{{ summary.blocked }}</p>
+            <p style="font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem">connections denied</p>
         </div>
         <div class="stat-box" id="stat-disabled">
             <h3>Disabled</h3>
             <p class="stat-number">{{ summary.disabled }}</p>
+            <p style="font-size:0.72rem;color:var(--text-muted);margin-top:0.3rem">devices force-disabled</p>
         </div>
     </div>
+
 
     <div class="monitoring-grid">
         <!-- Alert Panel -->

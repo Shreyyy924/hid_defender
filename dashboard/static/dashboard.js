@@ -19,8 +19,10 @@ class DashboardUpdater {
         this.setupEventListeners();
         this.updateClock();
         this.refreshAll();
+        this.pollNewAlerts();   // start real-time threat polling
         setInterval(() => this.updateClock(), 1000);
-        setInterval(() => this.refreshAll(), 30000); // Auto-refresh every 30s
+        setInterval(() => this.refreshAll(), 15000);   // full refresh every 15s
+        setInterval(() => this.pollNewAlerts(), 5000); // threat check every 5s
     }
 
     setupNavigation() {
@@ -228,9 +230,7 @@ class DashboardUpdater {
 
         const now = new Date();
         const timeStr = now.toLocaleTimeString();
-        const updateCountEl = document.getElementById('update-count');
-        
-        statusEl.innerHTML = `<span class="status-active"></span>Active | Updates: <span id="update-count">${this.updateCount}</span> | Last refresh: ${timeStr}`;
+        statusEl.innerHTML = `<span class="status-active"></span>Active | Updates: <span id="update-count">${this.updateCount}</span> | Last refresh: ${timeStr} <span class="monitor-indicator"><span class="monitor-dot"></span>USB Monitor ON</span>`;
     }
 
     updateStats() {
@@ -239,7 +239,6 @@ class DashboardUpdater {
             .then(data => {
                 this.updateStatCard('stat-total', data.total_events);
                 this.updateStatCard('stat-trusted', data.trusted);
-                this.updateStatCard('stat-safe', data.safe);
                 this.updateStatCard('stat-untrusted', data.untrusted);
                 this.updateStatCard('stat-blocked', data.blocked);
                 this.updateStatCard('stat-disabled', data.disabled);
@@ -641,6 +640,59 @@ class DashboardUpdater {
                     alert('Error clearing logs: ' + data.error);
                 }
             });
+    }
+
+    pollNewAlerts() {
+        fetch('/api/monitor/new-alerts')
+            .then(res => res.json())
+            .then(data => {
+                if (data.alerts && data.alerts.length > 0) {
+                    data.alerts.forEach(alert => this.showThreatToast(alert));
+                    // Refresh dashboard data so new events appear
+                    this.refreshAll();
+                }
+            })
+            .catch(() => {});  // silent fail — monitor may not be available
+    }
+
+    showThreatToast(alert) {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+
+        // Play alert sound
+        try {
+            const beep = document.getElementById('alert-beep');
+            if (beep) { beep.currentTime = 0; beep.play().catch(() => {}); }
+        } catch(e) {}
+
+        // Build toast element
+        const toast = document.createElement('div');
+        toast.className = 'toast-alert';
+        const time = new Date(alert.time).toLocaleTimeString();
+        toast.innerHTML = `
+            <button class="toast-close" onclick="this.parentElement.remove()">✕</button>
+            <div class="toast-title">🚨 UNTRUSTED USB DETECTED</div>
+            <div class="toast-device">📟 ${alert.device || 'Unknown Device'} — ${alert.vendor || ''}</div>
+            <div class="toast-device" style="font-family:monospace;font-size:0.72rem;color:#6366f1">${alert.id || ''}</div>
+            <div class="toast-reason">⚠ ${alert.reason}</div>
+            <div style="font-size:0.72rem;color:#475569;margin-top:0.4rem">${time} · Action: ${alert.action}</div>
+        `;
+
+        container.appendChild(toast);
+
+        // Auto-dismiss after 6 seconds
+        setTimeout(() => {
+            toast.style.animation = 'toastOut 0.35s ease forwards';
+            setTimeout(() => toast.remove(), 380);
+        }, 6000);
+
+        // Flash the page title
+        const originalTitle = document.title;
+        let blink = 0;
+        const titleInterval = setInterval(() => {
+            document.title = blink % 2 === 0 ? '🚨 THREAT DETECTED!' : originalTitle;
+            if (++blink >= 8) { clearInterval(titleInterval); document.title = originalTitle; }
+        }, 600);
     }
 
     animateUpdate(element) {

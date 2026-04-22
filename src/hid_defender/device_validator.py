@@ -67,9 +67,14 @@ def run_baseline_setup(wmi_obj=None, logger=None):
 
     print("Initial startup: Establishing trusted hardware baseline...")
     new_baseline = []
-    
+
+    try:
+        from .config import IS_WINDOWS
+    except ImportError:
+        from config import IS_WINDOWS  # type: ignore
+
     if wmi_obj:
-        # Windows mode: store normalized VID/PID for reliable matching
+        # Windows with wmi package available
         from .device_monitor import _is_valid_hid, _parse_windows_device
         for dev in wmi_obj.Win32_PnPEntity():
             if _is_valid_hid(dev):
@@ -78,15 +83,24 @@ def run_baseline_setup(wmi_obj=None, logger=None):
                 entry = {"hardware_id": hw_id, "vendor": details['vendor'], "name": details['name']}
                 if entry not in new_baseline:
                     new_baseline.append(entry)
+    elif IS_WINDOWS:
+        # Windows fallback: use built-in wmic command (no wmi package needed)
+        from .device_monitor import get_windows_usb_devices_wmic
+        devices = get_windows_usb_devices_wmic()
+        for details in devices:
+            hw_id = normalize_hardware_id(details['id'])
+            entry = {"hardware_id": hw_id, "vendor": details['vendor'], "name": details['name']}
+            if entry not in new_baseline:
+                new_baseline.append(entry)
     else:
-        # macOS/Linux mode: retain the vendor/product signature if no VID/PID is available
+        # macOS/Linux
         devices = get_macos_usb_devices()
         for details in devices:
             hw_id = normalize_hardware_id(details['id'])
             entry = {"hardware_id": hw_id, "vendor": details['vendor'], "name": details['name']}
             if entry not in new_baseline:
                 new_baseline.append(entry)
-                
+
     save_whitelist(new_baseline)
     print(f"Done. {len(new_baseline)} devices registered as trusted.")
     return new_baseline
@@ -146,6 +160,9 @@ def parse_device(dev_info):
 
 def evaluate(info, whitelist):
     """Analyzes a new connection for suspicious traits."""
+    if not isinstance(info, dict):
+        return "ERROR", "ALLOW", "Invalid device info format"
+
     # Handle both 'id' (from device_monitor) and 'hardware_id' (from fixtures)
     device_id = info.get('id') or info.get('hardware_id')
     if not device_id:

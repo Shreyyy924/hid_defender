@@ -68,14 +68,71 @@ def _parse_macos_usb_item(item, parent_path):
 
 
 def get_windows_usb_devices(wmi_client):
-    """Get USB devices on Windows using WMI."""
+    """Get USB devices on Windows using WMI, falling back to wmic on failure."""
     devices = []
     try:
         for dev in wmi_client.Win32_PnPEntity():
             if _is_valid_hid(dev):
                 devices.append(_parse_windows_device(dev))
+        return devices
     except Exception as e:
-        print(f"Error querying USB devices: {e}")
+        # WMI COM query failed (common on some Windows configs) — fall back to wmic
+        return get_windows_usb_devices_wmic()
+
+
+
+def get_windows_usb_devices_wmic():
+    """Get USB HID devices using built-in wmic command (no wmi package needed)."""
+    devices = []
+    try:
+        result = subprocess.run(
+            [
+                "wmic", "path", "Win32_PnPEntity",
+                "where", "PNPDeviceID like 'USB%'",
+                "get", "PNPDeviceID,Name,Manufacturer,Caption",
+                "/format:csv"
+            ],
+            capture_output=True, text=True, timeout=10
+        )
+        if result.returncode != 0:
+            return devices
+
+        lines = [l.strip() for l in result.stdout.splitlines() if l.strip()]
+        # First line is header: Node,Caption,Manufacturer,Name,PNPDeviceID
+        if len(lines) < 2:
+            return devices
+
+        header = [h.strip() for h in lines[0].split(",")]
+        for line in lines[1:]:
+            parts = line.split(",")
+            if len(parts) < len(header):
+                continue
+            row = dict(zip(header, [p.strip() for p in parts]))
+            pnp = row.get("PNPDeviceID", "")
+            name = row.get("Name", "Unknown")
+            manu = row.get("Manufacturer", "Unknown")
+            caption = row.get("Caption", name)
+            desc = name.lower()
+
+            # Filter: must be USB and not a hub/host controller
+            if "USB" not in pnp.upper():
+                continue
+            if "hub" in desc or "host controller" in desc:
+                continue
+
+            keywords = ["hid", "keyboard", "mouse", "input", "audio", "composite", "media"]
+            if not any(k in desc for k in keywords):
+                continue
+
+            devices.append({
+                "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                "name": name,
+                "vendor": manu,
+                "product": caption,
+                "id": pnp
+            })
+    except Exception as e:
+        print(f"Error querying USB devices via wmic: {e}")
     return devices
 
 
@@ -200,6 +257,9 @@ class BackgroundDeviceMonitor:
             devices = get_macos_usb_devices()
         elif IS_WINDOWS and self.wmi_client:
             devices = get_windows_usb_devices(self.wmi_client)
+        elif IS_WINDOWS:
+            # Fallback: use built-in wmic command (no wmi package needed)
+            devices = get_windows_usb_devices_wmic()
         else:
             devices = []
         

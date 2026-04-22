@@ -66,6 +66,8 @@ class TestIntegration:
              patch('hid_defender.logging_setup.LOG_PATH', str(temp_log_file)), \
              patch('hid_defender.config.WHITELIST_PATH', str(temp_whitelist_file)), \
              patch('hid_defender.config.LOG_PATH', str(temp_log_file)), \
+             patch('hid_defender.alert_system.IS_MACOS', True), \
+             patch('hid_defender.alert_system.IS_WINDOWS', False), \
              patch('hid_defender.alert_system.subprocess.run') as mock_alert:
 
             from hid_defender.logging_setup import init_logger
@@ -97,6 +99,7 @@ class TestIntegration:
                 'name': attack_device['description'],
                 'id': attack_device['hardware_id']
             })
+            time.sleep(0.1)  # wait for daemon thread to execute
             mock_alert.assert_called_once()
 
             # Step 5: Log the event

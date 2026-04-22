@@ -19,20 +19,23 @@ except ImportError:
 class TestKeystrokeMonitoring:
     """Test keystroke monitoring and detection functionality."""
 
-    def test_tc10_rapid_keystroke_detection(self):
+    @patch('time.time')
+    def test_tc10_rapid_keystroke_detection(self, mock_time):
         """TC-10: Verify that automated fast typing is detected."""
         from hid_defender.keystroke_monitor import KeystrokeMonitor
 
-        monitor = KeystrokeMonitor()
-
         # Simulate rapid keystrokes (15+ keys/sec threshold)
-        start_time = time.time()
+        current_time = 1000.0
+        mock_time.return_value = current_time
+
+        monitor = KeystrokeMonitor()
 
         # Generate 20 keystrokes in less than 1 second
         for i in range(20):
+            mock_time.return_value = current_time
             # Simulate key press
             monitor.on_press(KeyCode.from_char('a'))
-            time.sleep(0.01)  # 10ms delay = 100 keys/sec
+            current_time += 0.01  # 10ms delay = 100 keys/sec
 
         # Check if rapid typing was detected
         assert monitor.rapid_typing_detected
@@ -57,6 +60,7 @@ class TestKeystrokeMonitoring:
         assert not monitor.rapid_typing_detected
         assert monitor.keystroke_count < 15
 
+    @patch('hid_defender.keystroke_monitor.IS_MACOS', True)
     @patch('hid_defender.keystroke_monitor.contextlib.redirect_stderr')
     @patch('hid_defender.keystroke_monitor.pynput.keyboard.Listener')
     def test_keystroke_monitor_macos_permissions(self, mock_listener, mock_redirect):

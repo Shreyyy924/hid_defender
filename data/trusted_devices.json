@@ -1,17 +1,7 @@
 [
     {
-        "hardware_id": "VID_046D&PID_C52B",
-        "vendor": "Logitech",
-        "name": "Logitech USB Receiver (Mouse/Keyboard)"
-    },
-    {
-        "hardware_id": "VID_413C&PID_2107",
-        "vendor": "Dell",
-        "name": "Dell Wired Keyboard"
-    },
-    {
-        "hardware_id": "VID_045E&PID_0745",
-        "vendor": "Microsoft",
-        "name": "Microsoft Wireless Desktop Receiver"
+        "hardware_id": "VID_04F2&PID_B75E",
+        "vendor": "(Standard USB Host Controller)",
+        "name": "USB Composite Device"
     }
 ]

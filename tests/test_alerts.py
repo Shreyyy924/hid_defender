@@ -23,6 +23,8 @@ class TestAlertSystem:
             'id': 'VID_DEAD&PID_BEEF'
         }
         show_alert(device_info)
+        import time
+        time.sleep(0.1)  # wait for daemon thread to execute
 
         # Verify osascript was called for macOS notification
         mock_subprocess.assert_called_once()
@@ -59,6 +61,7 @@ class TestAlertSystem:
     def test_play_alert_sound_macos(self, mock_subprocess, monkeypatch):
         """Test alert sound on macOS."""
         monkeypatch.setattr('hid_defender.alert_system.IS_MACOS', True)
+        monkeypatch.setattr('hid_defender.alert_system.IS_WINDOWS', False)
 
         from hid_defender.alert_system import play_alert_sound
 
@@ -96,9 +99,11 @@ class TestAlertSystem:
     def test_alert_message_formatting(self, monkeypatch):
         """Test that alert messages are properly formatted."""
         monkeypatch.setattr('hid_defender.alert_system.IS_MACOS', True)
+        monkeypatch.setattr('hid_defender.alert_system.IS_WINDOWS', False)
 
         with patch('hid_defender.alert_system.subprocess.run') as mock_subprocess:
             from hid_defender.alert_system import show_alert
+            import time
 
             # show_alert expects a dict with 'name' and 'id' keys
             device_info = {
@@ -107,6 +112,7 @@ class TestAlertSystem:
             }
 
             show_alert(device_info)
+            time.sleep(0.1)  # wait for daemon thread to call subprocess
 
             # Verify the device info is included in the notification
             call_args = mock_subprocess.call_args[0][0]
