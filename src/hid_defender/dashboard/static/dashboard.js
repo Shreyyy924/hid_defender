@@ -176,13 +176,6 @@ class DashboardUpdater {
                         closeBtn.onclick = () => {
                             modal.classList.add('hidden');
                             document.querySelector('[data-section="logs"]').click();
-                            
-                            // Optionally pre-fill search filter to show these events
-                            const filterInput = document.getElementById('event-filter');
-                            if (filterInput) {
-                                filterInput.value = 'BLOCKED';
-                                filterInput.dispatchEvent(new Event('input'));
-                            }
                         };
                         
                         btnElement.innerHTML = '✓ Simulation Complete';
@@ -238,10 +231,19 @@ class DashboardUpdater {
             .then(res => res.json())
             .then(data => {
                 this.updateStatCard('stat-total', data.total_events);
-                this.updateStatCard('stat-trusted', data.trusted);
-                this.updateStatCard('stat-untrusted', data.untrusted);
-                this.updateStatCard('stat-blocked', data.blocked);
-                this.updateStatCard('stat-disabled', data.disabled);
+                this.updateStatCard('stat-trusted', data.trusted_count);
+                this.updateStatCard('stat-untrusted', data.untrusted_count);
+                this.updateStatCard('stat-blocked', data.blocked_count);
+                this.updateStatCard('stat-disabled', data.disabled_count);
+
+                // Also update the unique devices text if it exists
+                const trustedBox = document.getElementById('stat-trusted');
+                if (trustedBox) {
+                    const mutedText = trustedBox.querySelector('p[style*="font-size:0.72rem"]');
+                    if (mutedText) {
+                        mutedText.textContent = `${data.unique_devices} unique device(s) registered`;
+                    }
+                }
 
                 this.updateCount++;
                 this.updateClock();
