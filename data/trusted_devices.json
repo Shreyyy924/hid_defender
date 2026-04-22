@@ -3,5 +3,35 @@
         "hardware_id": "VID_04F2&PID_B75E",
         "vendor": "(Standard USB Host Controller)",
         "name": "USB Composite Device"
+    },
+    {
+        "hardware_id": "VID_046D&PID_C52B",
+        "vendor": "Logitech, Inc.",
+        "name": "Unifying Receiver (Industry Standard)"
+    },
+    {
+        "hardware_id": "VID_05AC&PID_0267",
+        "vendor": "Apple, Inc.",
+        "name": "Magic Keyboard (Industry Standard)"
+    },
+    {
+        "hardware_id": "VID_413C&PID_2107",
+        "vendor": "Dell Computer Corp.",
+        "name": "QuietKey Keyboard (Industry Standard)"
+    },
+    {
+        "hardware_id": "VID_03F0&PID_0024",
+        "vendor": "HP, Inc.",
+        "name": "Standard Keyboard (Industry Standard)"
+    },
+    {
+        "hardware_id": "VID_045E&PID_07B1",
+        "vendor": "Microsoft Corp.",
+        "name": "Wired Keyboard 600 (Industry Standard)"
+    },
+    {
+        "hardware_id": "VID_046D&PID_C077",
+        "vendor": "Logitech, Inc.",
+        "name": "M100 Optical Mouse (Industry Standard)"
     }
 ]
