@@ -6,7 +6,7 @@ from typing import List, Dict, Optional
 # Core imports
 from hid_defender.device_monitor import BackgroundDeviceMonitor
 from hid_defender.device_validator import evaluate, get_whitelist, normalize_hardware_id
-from hid_defender.logging_setup import log_event
+from hid_defender.logging_setup import log_event, init_logger
 from hid_defender.alert_system import lock_workstation, eject_usb_device
 
 class USBMonitor:
@@ -16,7 +16,8 @@ class USBMonitor:
         self.new_alerts: List[Dict] = []
         self.lock = threading.Lock()
         
-        # Initialize core monitor
+        # Initialize core monitor and logger
+        self.logger = init_logger()
         self.core_monitor = BackgroundDeviceMonitor(
             callback=self._on_new_devices,
             scan_interval=5.0
@@ -31,7 +32,7 @@ class USBMonitor:
                 result, action, reason = evaluate(dev, whitelist)
                 
                 # Log the event using core library
-                log_event(dev, result, action, reason)
+                log_event(self.logger, dev, result, action, reason)
 
                 if result == "UNTRUSTED":
                     self.new_alerts.append({
