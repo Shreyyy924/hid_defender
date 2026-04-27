@@ -41,8 +41,8 @@ def main():
     parser.add_argument(
         "--port",
         type=int,
-        default=5001,
-        help="Port for the dashboard (default: 5001)"
+        default=8888,
+        help="Port for the dashboard (default: 8888)"
     )
     
     parser.add_argument(
@@ -80,7 +80,7 @@ def main():
         
         if args.dashboard:
             logger.info(f"Starting Flask dashboard on port {args.port}...")
-            from dashboard.app import app
+            from .dashboard.app import app
             app.run(host="0.0.0.0", port=args.port, debug=False)
             return 0
         

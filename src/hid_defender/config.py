@@ -59,14 +59,15 @@ ATTACK_VECTORS = [
 
 # Mapping for suspicious VIDs to friendly names
 SUSPICIOUS_MAPPING = {
-    "VID_2E8A": "Raspberry Pi",
-    "VID_239A": "Adafruit",
-    "VID_16C0": "Teensy/Arduino",
-    "VID_2341": "Arduino",
-    "VID_1209": "Open Source Platform",
-    "VID_6666": "Prototype/Generic",
-    "VID_CAFE": "Prototype/BadUSB",
-    "VID_1B4F": "SparkFun"
+    "VID_2E8A": "Raspberry Pi Pico (BadUSB)",
+    "VID_239A": "Adafruit / CircuitPython (attack tool)",
+    "VID_16C0": "Teensy / Arduino (BadUSB)",
+    "VID_2341": "Arduino (BadUSB)",
+    "VID_1209": "Open-source attack platform",
+    "VID_6666": "Prototype / Generic BadUSB",
+    "VID_CAFE": "BadUSB prototype",
+    "VID_1B4F": "SparkFun (attack tool)",
+    "VID_DEAD": "Spoofed / Fake USB Device",
 }
 
 # Malicious command patterns to detect
