@@ -7,6 +7,8 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
     <!-- Modern premium fonts loaded in styles.css -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+    <!-- Chart.js for Advanced Analytics -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 </head>
 <body>
@@ -32,7 +34,7 @@
         <header>
             <div class="header-left">
                 <h1>HID Detection & Alert System</h1>
-                <p id="status-time"><span class="status-active"></span>Active | Updates: <span id="update-count">0</span> | Last refresh: --:--:--</p>
+                <p id="status-time"><span class="status-active"></span>HID Engine: <b style="color: #10b981;">Active</b></p>
             </div>
             <div class="header-right">
                 <button id="refresh-btn" class="button button-secondary">🔄 Refresh</button>

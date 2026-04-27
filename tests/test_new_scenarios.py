@@ -120,10 +120,10 @@ class TestNewScenarios:
 
     def test_tc018_dashboard_update_verification(self):
         """TC018: Dashboard Update Verification - Dashboard updates when events occur."""
-        from dashboard.app import app, _new_alerts
+        from hid_defender.dashboard.app import app, monitor
         
         # Add a test alert to the dashboard's internal queue
-        _new_alerts.append({
+        monitor.new_alerts.append({
             "time": "2026-04-22 10:00:00",
             "device": "Test Device",
             "vendor": "Test Vendor",

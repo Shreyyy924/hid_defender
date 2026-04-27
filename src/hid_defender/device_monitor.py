@@ -239,7 +239,9 @@ class BackgroundDeviceMonitor:
                 self._device_ids_seen = current_ids
                 
             except Exception as e:
+                import traceback
                 print(f"Error in device monitoring loop: {e}")
+                traceback.print_exc()
             
             time.sleep(self.scan_interval)
     

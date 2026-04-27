@@ -10,6 +10,7 @@ class DashboardUpdater {
         this.resultFilter = '';
         this.allEvents = [];
         this.testsLoaded = false;
+        this.threatChart = null;
         
         this.init();
     }
@@ -217,15 +218,6 @@ class DashboardUpdater {
         ]).catch(err => console.error('Update error:', err));
     }
 
-    updateClock() {
-        const statusEl = document.getElementById('status-time');
-        if (!statusEl) return;
-
-        const now = new Date();
-        const timeStr = now.toLocaleTimeString();
-        statusEl.innerHTML = `<span class="status-active"></span>Active | Updates: <span id="update-count">${this.updateCount}</span> | Last refresh: ${timeStr} <span class="monitor-indicator"><span class="monitor-dot"></span>USB Monitor ON</span>`;
-    }
-
     updateStats() {
         return fetch('/api/stats')
             .then(res => res.json())
@@ -247,7 +239,210 @@ class DashboardUpdater {
 
                 this.updateCount++;
                 this.updateClock();
+                if (data.chart_data) {
+                    this.updateChart(data.chart_data);
+                }
+
+                // Update Advanced KPIs
+                if (data.security_score !== undefined) {
+                    const scoreEl = document.getElementById('score-value');
+                    const gaugeEl = document.getElementById('score-gauge-path');
+                    if (scoreEl) scoreEl.textContent = Math.round(data.security_score);
+                    if (gaugeEl) {
+                        // Calculate dash array (max 100)
+                        gaugeEl.style.strokeDasharray = `${data.security_score}, 100`;
+                    }
+                }
+
+                if (data.mttr_ms !== undefined) {
+                    const mttrEl = document.getElementById('kpi-mttr');
+                    if (mttrEl) mttrEl.textContent = data.mttr_ms;
+                }
+
+                if (data.suppression_rate !== undefined) {
+                    const suppEl = document.getElementById('kpi-suppression');
+                    if (suppEl) suppEl.textContent = Math.round(data.suppression_rate);
+                }
+
+                if (data.uptime_seconds !== undefined) {
+                    const uptimeEl = document.getElementById('kpi-uptime');
+                    if (uptimeEl) uptimeEl.textContent = this.formatUptime(data.uptime_seconds);
+                }
             });
+    }
+
+    formatUptime(seconds) {
+        if (seconds < 60) return `${seconds}s`;
+        const m = Math.floor(seconds / 60);
+        if (m < 60) return `${m}m ${seconds % 60}s`;
+        const h = Math.floor(m / 60);
+        return `${h}h ${m % 60}m`;
+    }
+
+    initChart(data) {
+        const ctxEl = document.getElementById('threatChart');
+        if (!ctxEl) return;
+        const ctx = ctxEl.getContext('2d');
+
+        // Create Premium Gradients
+        const threatGradient = ctx.createLinearGradient(0, 0, 0, 300);
+        threatGradient.addColorStop(0, 'rgba(239, 68, 68, 0.4)');
+        threatGradient.addColorStop(1, 'rgba(239, 68, 68, 0.0)');
+
+        const safeGradient = ctx.createLinearGradient(0, 0, 0, 300);
+        safeGradient.addColorStop(0, 'rgba(59, 130, 246, 0.4)');
+        safeGradient.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
+
+        Chart.defaults.color = '#94a3b8';
+        Chart.defaults.font.family = "'Outfit', sans-serif";
+
+        this.threatChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels,
+                datasets: [
+                    {
+                        label: 'Untrusted/Attacks',
+                        data: data.untrusted,
+                        borderColor: '#ef4444',
+                        backgroundColor: threatGradient,
+                        fill: true,
+                        tension: 0.45,
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: '#ef4444',
+                        pointHoverBorderColor: '#fff',
+                        pointHoverBorderWidth: 2,
+                        shadowBlur: 10,
+                        shadowColor: 'rgba(239, 68, 68, 0.5)'
+                    },
+                    {
+                        label: 'Trusted/Safe',
+                        data: data.trusted,
+                        borderColor: '#3b82f6',
+                        backgroundColor: safeGradient,
+                        fill: true,
+                        tension: 0.45,
+                        borderWidth: 3,
+                        pointRadius: 0,
+                        pointHoverRadius: 6,
+                        pointHoverBackgroundColor: '#3b82f6',
+                        pointHoverBorderColor: '#fff',
+                        pointHoverBorderWidth: 2
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                        titleFont: { size: 14, weight: '700', family: 'Outfit' },
+                        bodyFont: { size: 13 },
+                        padding: 15,
+                        cornerRadius: 12,
+                        borderColor: 'rgba(255, 255, 255, 0.1)',
+                        borderWidth: 1,
+                        displayColors: true,
+                        boxPadding: 6,
+                        usePointStyle: true,
+                        callbacks: {
+                            label: function(context) {
+                                return ` ${context.dataset.label}: ${context.raw} events`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { 
+                            color: 'rgba(255, 255, 255, 0.05)', 
+                            drawBorder: false,
+                            borderDash: [5, 5] 
+                        },
+                        ticks: { 
+                            padding: 10,
+                            callback: function(value) { if (value % 1 === 0) return value; }
+                        }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { padding: 10 }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                },
+                animations: {
+                    tension: { duration: 1000, easing: 'linear' }
+                }
+            }
+        });
+    }
+
+    updateChart(data) {
+        if (!this.threatChart) {
+            this.initChart(data);
+            return;
+        }
+
+        this.threatChart.data.labels = data.labels;
+        this.threatChart.data.datasets[0].data = data.untrusted;
+        this.threatChart.data.datasets[1].data = data.trusted;
+        this.threatChart.update('none');
+
+        // Update Professional Sidebar Metrics
+        const totalTrusted = data.trusted.reduce((a, b) => a + b, 0);
+        const totalUntrusted = data.untrusted.reduce((a, b) => a + b, 0);
+        const grandTotal = totalTrusted + totalUntrusted;
+
+        if (grandTotal > 0) {
+            const trustedPct = Math.round((totalTrusted / grandTotal) * 100);
+            const untrustedPct = Math.round((totalUntrusted / grandTotal) * 100);
+
+            const trustedPctEl = document.getElementById('legend-trusted-pct');
+            const untrustedPctEl = document.getElementById('legend-untrusted-pct');
+            const trustedBarEl = document.getElementById('legend-trusted-bar');
+            const untrustedBarEl = document.getElementById('legend-untrusted-bar');
+
+            if (trustedPctEl) trustedPctEl.textContent = `${trustedPct}%`;
+            if (untrustedPctEl) untrustedPctEl.textContent = `${untrustedPct}%`;
+            if (trustedBarEl) trustedBarEl.style.width = `${trustedPct}%`;
+            if (untrustedBarEl) untrustedBarEl.style.width = `${untrustedPct}%`;
+        }
+
+        // Detect Peak Intensity Hour
+        let maxVal = -1;
+        let peakLabel = 'None';
+        for (let i = 0; i < data.labels.length; i++) {
+            const sum = data.trusted[i] + data.untrusted[i];
+            if (sum > maxVal) {
+                maxVal = sum;
+                peakLabel = data.labels[i];
+            }
+        }
+        const peakEl = document.getElementById('kpi-peak-hour');
+        if (peakEl) peakEl.textContent = maxVal > 0 ? `${peakLabel} Window` : 'No Activity';
+    }
+
+    updateClock() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        
+        // Update the chart panel clock (Live Update indicator)
+        const lastUpdateEl = document.getElementById('last-update-time');
+        if (lastUpdateEl) lastUpdateEl.textContent = timeStr;
+        
+        // Ensure the status bar stays clean
+        const statusEl = document.getElementById('status-time');
+        if (statusEl && !statusEl.innerHTML.includes('HID Engine')) {
+             statusEl.innerHTML = `<span class="status-active"></span>HID Engine: <b style="color: #10b981;">Active</b>`;
+        }
     }
 
     updateStatCard(elementId, value) {

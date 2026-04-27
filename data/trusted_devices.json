@@ -3,7 +3,7 @@
         "hardware_id": "VID_04F2&PID_B75E",
         "vendor": "(Standard USB Host Controller)",
         "name": "USB Composite Device",
-        "last_seen": "2026-04-27 23:37:56",
+        "last_seen": "2026-04-28 00:10:11",
         "first_seen": "2026-04-27 23:36:47"
     },
     {
@@ -19,7 +19,9 @@
     {
         "hardware_id": "VID_413C&PID_2107",
         "vendor": "Dell Computer Corp.",
-        "name": "QuietKey Keyboard (Industry Standard)"
+        "name": "QuietKey Keyboard (Industry Standard)",
+        "last_seen": "2026-04-28 00:11:42",
+        "first_seen": "2026-04-28 00:10:11"
     },
     {
         "hardware_id": "VID_03F0&PID_0024",

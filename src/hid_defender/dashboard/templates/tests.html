@@ -2,85 +2,7 @@
 {% block title %}Test Runner — HID Defender{% endblock %}
 
 {% block content %}
-<style>
-  :root {
-    --bg:#0f1117; --surface:#1a1d27; --card:#1e2130; --border:#2a2d3d;
-    --accent:#6366f1; --green:#22c55e; --red:#ef4444; --yellow:#f59e0b;
-    --text:#e2e8f0; --muted:#64748b;
-  }
-
-  .page-header { margin-bottom: 1.5rem; }
-  .page-header h1 { font-size: 1.6rem; font-weight: 700; color: var(--accent); }
-  .page-header p  { color: var(--muted); font-size: .87rem; margin-top:.3rem; }
-
-  /* Run-all bar */
-  .run-bar { display:flex; gap:.8rem; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; }
-  .btn { padding:.55rem 1.2rem; border-radius:8px; border:none; cursor:pointer;
-         font-family:inherit; font-size:.85rem; font-weight:600; transition:.15s; }
-  .btn-primary { background:var(--accent); color:#fff; }
-  .btn-primary:hover { background:#4f52d9; }
-  .btn-unit    { background:#22c55e22; color:var(--green); border:1px solid #22c55e44; }
-  .btn-unit:hover { background:#22c55e33; }
-  .btn-sys     { background:#6366f122; color:var(--accent); border:1px solid #6366f144; }
-  .btn-sys:hover { background:#6366f133; }
-
-  /* Summary counters */
-  .summary-bar { display:flex; gap:1rem; margin-bottom:1.5rem; flex-wrap:wrap; }
-  .scard { background:var(--card); border:1px solid var(--border); border-radius:10px;
-           padding:.7rem 1.2rem; min-width:100px; text-align:center; }
-  .scard .sv { font-size:1.6rem; font-weight:700; }
-  .scard .sl { font-size:.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; }
-  .sv-total { color:var(--accent); }
-  .sv-pass  { color:var(--green); }
-  .sv-fail  { color:var(--red);   }
-
-  /* Section */
-  .section { background:var(--card); border:1px solid var(--border); border-radius:12px;
-             margin-bottom:1.5rem; overflow:hidden; }
-  .section-header { padding:.8rem 1.2rem; border-bottom:1px solid var(--border);
-                    display:flex; align-items:center; gap:.6rem;
-                    font-weight:600; font-size:.9rem; }
-  .dot { width:8px; height:8px; border-radius:50%; display:inline-block; }
-  .dot-green  { background:var(--green); }
-  .dot-blue   { background:var(--accent); }
-  .dot-yellow { background:var(--yellow); }
-  .badge-count { margin-left:auto; background:var(--surface); border:1px solid var(--border);
-                 border-radius:20px; padding:2px 10px; font-size:.75rem; color:var(--muted); }
-
-  /* Test table */
-  table { width:100%; border-collapse:collapse; font-size:.82rem; }
-  th { position:sticky; top:0; background:var(--surface); padding:.55rem 1rem;
-       text-align:left; color:var(--muted); font-weight:600;
-       text-transform:uppercase; letter-spacing:.04em;
-       border-bottom:1px solid var(--border); }
-  td { padding:.6rem 1rem; border-bottom:1px solid var(--border);
-       font-family:'JetBrains Mono',monospace; vertical-align:middle; }
-  tr:last-child td { border-bottom:none; }
-  tr:hover td { background:#ffffff06; }
-
-  /* Result badge */
-  .r-badge { display:inline-block; border-radius:20px; padding:2px 10px;
-             font-size:.72rem; font-weight:600; }
-  .r-pass    { background:#22c55e22; color:var(--green);  border:1px solid #22c55e44; }
-  .r-fail    { background:#ef444422; color:var(--red);    border:1px solid #ef444444; }
-  .r-pending { background:#f59e0b22; color:var(--yellow); border:1px solid #f59e0b44; }
-
-  /* Run btn */
-  .run-one { background:transparent; border:1px solid var(--border); border-radius:6px;
-             padding:3px 10px; color:var(--muted); cursor:pointer; font-size:.75rem;
-             font-family:inherit; }
-  .run-one:hover { border-color:var(--accent); color:var(--accent); }
-
-  /* Output console */
-  #console-wrap { display:none; margin-top:1.5rem; }
-  #console { background:#0a0c13; border:1px solid var(--border); border-radius:10px;
-             padding:1rem; color:#94a3b8; font-family:'JetBrains Mono',monospace;
-             font-size:.78rem; white-space:pre-wrap; max-height:400px; overflow-y:auto; }
-  .spinner { display:inline-block; width:14px; height:14px; border:2px solid var(--border);
-             border-top-color:var(--accent); border-radius:50%;
-             animation:spin .6s linear infinite; vertical-align:middle; }
-  @keyframes spin { to { transform:rotate(360deg); } }
-</style>
+<link rel="stylesheet" href="{{ url_for('static', filename='tests.css') }}" />
 
 <div class="page-header">
   <h1>🧪 Test Runner — Chapter 4</h1>
@@ -117,7 +39,7 @@
       <td>{{ t.label }}</td>
       <td style="color:var(--muted);font-size:.75rem">{{ t.name }}</td>
       <td><span class="r-badge r-pending" id="status-unit-{{ loop.index0 }}">Pending</span></td>
-      <td><button class="run-one" onclick="runOne('{{ t.id }}','unit','{{ loop.index0 }}')">▶</button></td>
+      <td><button class="run-one" onclick="runOne('{{ t.id }}','unit','{{ loop.index0 }}')" title="Execute Individual Test">▶</button></td>
     </tr>
     {% endfor %}
   </table>
@@ -141,7 +63,7 @@
       <td>{{ t.label }}</td>
       <td style="color:var(--muted);font-size:.75rem">{{ t.name }}</td>
       <td><span class="r-badge r-pending" id="status-system-{{ loop.index0 }}">Pending</span></td>
-      <td><button class="run-one" onclick="runOne('{{ t.id }}','system','{{ loop.index0 }}')">▶</button></td>
+      <td><button class="run-one" onclick="runOne('{{ t.id }}','system','{{ loop.index0 }}')" title="Execute Individual Test">▶</button></td>
     </tr>
     {% endfor %}
   </table>
@@ -165,7 +87,7 @@
       <td>{{ t.module }}</td>
       <td style="color:var(--muted);font-size:.75rem">{{ t.name }}</td>
       <td><span class="r-badge r-pending" id="status-other-{{ loop.index0 }}">Pending</span></td>
-      <td><button class="run-one" onclick="runOne('{{ t.id }}','other','{{ loop.index0 }}')">▶</button></td>
+      <td><button class="run-one" onclick="runOne('{{ t.id }}','other','{{ loop.index0 }}')" title="Execute Individual Test">▶</button></td>
     </tr>
     {% endfor %}
   </table>
@@ -173,94 +95,25 @@
 </div>
 {% endif %}
 
-<!-- Output console -->
-<div id="console-wrap">
-  <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:.5rem;font-size:.85rem;color:var(--muted)">
-    <span id="console-label">Output</span>
-    <button class="run-one" onclick="document.getElementById('console-wrap').style.display='none'">✕ Close</button>
+<!-- Test Results Modal -->
+<div id="results-modal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 id="modal-title">Test Results</h2>
+      <button class="run-one" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="modal-summary" style="margin-bottom:1.5rem"></div>
+      <div style="font-size:.85rem;color:var(--muted);margin-bottom:.5rem">Full Output:</div>
+      <pre id="modal-console" style="background:#0a0c13; border:1px solid var(--border); border-radius:8px;
+                                     padding:1rem; color:#94a3b8; font-family:'JetBrains Mono',monospace;
+                                     font-size:.78rem; white-space:pre-wrap;"></pre>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" onclick="closeModal()">Close Results</button>
+    </div>
   </div>
-  <pre id="console"></pre>
 </div>
 
-<script>
-function setStatus(group, idx, passed) {
-  const el = document.getElementById(`status-${group}-${idx}`);
-  if (!el) return;
-  el.className = 'r-badge ' + (passed ? 'r-pass' : 'r-fail');
-  el.textContent = passed ? '✅ Pass' : '❌ Fail';
-}
-
-function showConsole(label, text) {
-  document.getElementById('console-label').textContent = label;
-  document.getElementById('console').textContent = text;
-  const w = document.getElementById('console-wrap');
-  w.style.display = 'block';
-  w.scrollIntoView({behavior:'smooth'});
-}
-
-async function runOne(testId, group, idx) {
-  setStatus(group, idx, null);
-  const el = document.getElementById(`status-${group}-${idx}`);
-  if (el) { el.className='r-badge r-pending'; el.innerHTML='<span class="spinner"></span>'; }
-
-  const res  = await fetch('/api/tests/run', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({test_id: testId})
-  });
-  const data = await res.json();
-  const r    = data.result;
-  setStatus(group, idx, r.passed);
-  showConsole(testId, (r.stdout || '') + (r.stderr ? '\n\n--- STDERR ---\n' + r.stderr : ''));
-}
-
-async function runAll(file) {
-  // Reset all badges
-  document.querySelectorAll('.r-badge').forEach(b => {
-    b.className='r-badge r-pending'; b.textContent='Pending';
-  });
-  document.getElementById('summary-bar').style.display='none';
-
-  const btn = event.target;
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Running…';
-
-  const res  = await fetch('/api/tests/run/all', {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({file})
-  });
-  const data = await res.json();
-
-  btn.disabled = false;
-  btn.innerHTML = btn.innerHTML.includes('Unit') ? 'Run Unit Tests (1–20)'
-                : btn.innerHTML.includes('System') ? 'Run System Tests (1–20)'
-                : '▶ Run All Tests';
-
-  // Show summary
-  document.getElementById('s-total').textContent = data.pass_count + data.fail_count;
-  document.getElementById('s-pass').textContent  = data.pass_count;
-  document.getElementById('s-fail').textContent  = data.fail_count;
-  document.getElementById('summary-bar').style.display = 'flex';
-
-  // Update individual badges from stdout
-  const lines = (data.stdout || '').split('\n');
-  lines.forEach(line => {
-    const pm = line.match(/tests\/(test_\w+)\.py::(\w+)::(\w+)\s+(PASSED|FAILED)/);
-    if (!pm) return;
-    const [,mod,cls,func,verdict] = pm;
-    // Find matching row
-    document.querySelectorAll('tr[data-id]').forEach(row => {
-      const id = row.getAttribute('data-id');
-      if (id && id.includes(func)) {
-        const badge = row.querySelector('.r-badge');
-        if (badge) {
-          badge.className = 'r-badge ' + (verdict==='PASSED' ? 'r-pass' : 'r-fail');
-          badge.textContent = verdict==='PASSED' ? '✅ Pass' : '❌ Fail';
-        }
-      }
-    });
-  });
-
-  showConsole('Full Test Run Output', data.stdout + (data.stderr ? '\n\n--- STDERR ---\n'+data.stderr : ''));
-}
-</script>
+<script src="{{ url_for('static', filename='tests.js') }}"></script>
 {% endblock %}

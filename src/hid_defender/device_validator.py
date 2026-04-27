@@ -194,13 +194,7 @@ def evaluate(info, whitelist):
     p_low = info.get('product', info.get('description', info.get('name', ''))).lower()
     n_low = info.get('name', info.get('description', info.get('product', ''))).lower()
 
-    # Step 1: Check blacklisted hardware IDs for known attack vectors
-    # Note: If a VID is in BOTH KNOWN_VENDORS and ATTACK_VECTORS (like Pi Pico),
-    # we allow it initially but keep the behavioral monitor active.
-    for vid, brand in KNOWN_VENDORS.items():
-        if vid in raw_id:
-            return "TRUSTED", "ALLOWED", f"Manufacturer: {brand} (Known VID)"
-
+    # Step 1: Check blacklisted hardware IDs for known attack vectors (Security Priority)
     for bad_vid in ATTACK_VECTORS:
         if bad_vid in raw_id:
             return "UNTRUSTED", "BLOCKED", f"Attack-vector VID detected: {bad_vid}"
@@ -211,6 +205,11 @@ def evaluate(info, whitelist):
             # Update last_seen timestamp in the JSON file
             _touch_device(whitelist, raw_id)
             return "TRUSTED", "ALLOWED", "Whitelisted device"
+
+    # Step 3: Fallback check for known manufacturers
+    for vid, brand in KNOWN_VENDORS.items():
+        if vid in raw_id:
+            return "TRUSTED", "ALLOWED", f"Auto-whitelisted manufacturer: {brand} (Known VID)"
 
     # Step 3: Heuristic allow-list for familiar brands and mice
     if any(brand in v_low or brand in p_low or brand in n_low for brand in BIG_BRANDS):

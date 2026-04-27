@@ -152,12 +152,19 @@ class KeystrokeMonitor:
                     # ensure the high speed is continuous (no long gaps)
                     diffs = [recent[i] - recent[i - 1] for i in range(1, len(recent))]
                     contiguous = all(d <= 0.05 for d in diffs)
-                    if contiguous:
+                    
+                    # 🛡️ BURST ANALYSIS: Check for inhumanly low variance (rhythmic typing)
+                    # Human typing has natural jitter; scripts often use fixed delays.
+                    variance = self._calculate_typing_variance(recent)
+                    is_rhythmic = variance < 0.008 and len(recent) >= 6
+                    
+                    if contiguous or is_rhythmic:
                         self.speed_exceed_streak += 1
                         if self.speed_exceed_streak >= getattr(self, 'required_streak', 4):
+                            reason = "Burst Analysis" if is_rhythmic else "High Speed"
                             self.logger.warning(
-                                f"⚠️ SUSPICIOUS KEYSTROKE SPEED: {keystroke_speed:.1f} keys/sec "
-                                f"(threshold: {KEYSTROKE_THRESHOLD})"
+                                f"⚠️ AUTOMATED TYPING DETECTED ({reason}): {keystroke_speed:.1f} keys/sec "
+                                f"(Variance: {variance:.4f}s)"
                             )
                             self.trigger_keystroke_alert(keystroke_speed)
                     else:
@@ -209,6 +216,20 @@ class KeystrokeMonitor:
         ):
             self.cmd_pressed = False
             self.win_pressed = False
+    
+    def _calculate_typing_variance(self, times: List[float]) -> float:
+        """Calculate standard deviation of keystroke intervals.
+        
+        Human typing has natural variations (jitter). Scripts often use fixed
+        delays between keys, resulting in extremely low variance.
+        """
+        if len(times) < 5:
+            return 1.0 # High variance for small samples
+            
+        intervals = [times[i] - times[i-1] for i in range(1, len(times))]
+        mean = sum(intervals) / len(intervals)
+        variance = sum((x - mean)**2 for x in intervals) / len(intervals)
+        return variance**0.5
 
     def check_command_patterns(self, char: str) -> None:
         """Detect malicious command patterns in typed input.
