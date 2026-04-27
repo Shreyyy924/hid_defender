@@ -52,11 +52,7 @@ class KeystrokeMonitor:
         self.keystroke_times: deque = deque(maxlen=20)  # Keep last 20 keystrokes
         self.rapid_typing_detected: bool = False
         self.keystroke_count: int = 0
-        try:
-            from .config import KEYSTROKE_THRESHOLD
-            self.threshold: float = float(KEYSTROKE_THRESHOLD)
-        except ImportError:
-            self.threshold: float = 100.0  # Fallback threshold
+        self.threshold: float = float(KEYSTROKE_THRESHOLD)
         self.last_reset_time: float = time.time()
         self.reset_window: float = 1.0
         self.speed_exceed_streak: int = 0
@@ -69,6 +65,9 @@ class KeystrokeMonitor:
         self.pending_device_time: Optional[float] = None
         self.ctrl_pressed: bool = False
         self.cmd_pressed: bool = False
+        self.win_pressed: bool = False
+        self._last_combo_alert: float = 0.0   # cooldown for Win+R / Ctrl+R
+        self._combo_cooldown: float = 5.0     # seconds between repeated combo alerts
         
         # If running on macOS and pynput is available, auto-start monitoring
         if PYNPUT_AVAILABLE and IS_MACOS:
@@ -168,19 +167,25 @@ class KeystrokeMonitor:
                     self.speed_exceed_streak = 0
                     self.rapid_typing_detected = False
 
-            # Track key combo and command text patterns
+            # Track modifier keys
+            # On Windows: keyboard.Key.cmd/cmd_l/cmd_r = Windows key
+            # On macOS:   keyboard.Key.cmd/cmd_l/cmd_r = Command key
             if key in (keyboard.Key.ctrl_l, keyboard.Key.ctrl_r):
                 self.ctrl_pressed = True
-            elif hasattr(keyboard.Key, "cmd") and key == keyboard.Key.cmd:
+            elif key in (
+                getattr(keyboard.Key, 'cmd',   None),
+                getattr(keyboard.Key, 'cmd_l', None),
+                getattr(keyboard.Key, 'cmd_r', None),
+            ):
                 self.cmd_pressed = True
-            elif hasattr(keyboard.Key, "cmd_l") and key == keyboard.Key.cmd_l:
-                self.cmd_pressed = True
-            elif hasattr(keyboard.Key, "cmd_r") and key == keyboard.Key.cmd_r:
-                self.cmd_pressed = True
+                if IS_WINDOWS:
+                    # On Windows these ARE the Win key
+                    self.win_pressed = True
             elif hasattr(key, 'char') and key.char:
                 self.check_command_patterns(key.char.lower())
             elif key in (keyboard.Key.enter, keyboard.Key.space):
                 self.command_buffer += ' '
+
             # update last reset timestamp
             self.last_reset_time = now
         except (AttributeError, TypeError) as e:
@@ -197,12 +202,13 @@ class KeystrokeMonitor:
 
         if key in (keyboard.Key.ctrl_l, keyboard.Key.ctrl_r):
             self.ctrl_pressed = False
-        elif hasattr(keyboard.Key, "cmd") and key == keyboard.Key.cmd:
+        elif key in (
+            getattr(keyboard.Key, 'cmd',   None),
+            getattr(keyboard.Key, 'cmd_l', None),
+            getattr(keyboard.Key, 'cmd_r', None),
+        ):
             self.cmd_pressed = False
-        elif hasattr(keyboard.Key, "cmd_l") and key == keyboard.Key.cmd_l:
-            self.cmd_pressed = False
-        elif hasattr(keyboard.Key, "cmd_r") and key == keyboard.Key.cmd_r:
-            self.cmd_pressed = False
+            self.win_pressed = False
 
     def check_command_patterns(self, char: str) -> None:
         """Detect malicious command patterns in typed input.
@@ -215,9 +221,21 @@ class KeystrokeMonitor:
         if len(self.command_buffer) > 300:
             self.command_buffer = self.command_buffer[-300:]
 
+        if self.win_pressed and char == "r":
+            now = time.time()
+            if now - self._last_combo_alert >= self._combo_cooldown:
+                self._last_combo_alert = now
+                self.logger.warning("⚠️ Suspicious launcher combo detected: Win + R (Run dialog — BadUSB vector)")
+                self.trigger_command_alert("win+r")
+            self.command_buffer = ""
+            return
+
         if (self.ctrl_pressed or self.cmd_pressed) and char == "r":
-            self.logger.warning("⚠️ Suspicious launcher combo detected: Ctrl/Cmd + R")
-            self.trigger_command_alert("ctrl/cmd+r")
+            now = time.time()
+            if now - self._last_combo_alert >= self._combo_cooldown:
+                self._last_combo_alert = now
+                self.logger.warning("⚠️ Suspicious launcher combo detected: Ctrl/Cmd + R")
+                self.trigger_command_alert("ctrl/cmd+r")
             self.command_buffer = ""
             return
 
