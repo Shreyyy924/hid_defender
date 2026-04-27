@@ -20,7 +20,7 @@ class USBMonitor:
         self.logger = init_logger()
         self.core_monitor = BackgroundDeviceMonitor(
             callback=self._on_new_devices,
-            scan_interval=5.0
+            scan_interval=1.0
         )
 
     def _on_new_devices(self, devices: List[Dict]):

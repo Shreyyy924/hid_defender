@@ -37,7 +37,7 @@ KNOWN_VENDORS = {
     "VID_1949": "Amazon", "VID_2833": "Meta (Oculus)", "VID_1532": "Razer", "VID_1B1C": "Corsair",
     "VID_1038": "SteelSeries", "VID_2516": "Cooler Master", "VID_1462": "MSI", "VID_1458": "Gigabyte",
     "VID_1849": "ASRock", "VID_2357": "TP-Link", "VID_0846": "Netgear", "VID_2001": "D-Link",
-    "VID_13B1": "Linksys", "VID_050D": "Belkin", "4112": "Ubiquiti", "VID_2636": "Juniper",
+    "VID_13B1": "Linksys", "VID_050D": "Belkin", "VID_4112": "Ubiquiti", "VID_2636": "Juniper",
     "VID_1050": "Yubico", "VID_096E": "Feitian", "VID_291A": "Anker", "VID_2568": "UGREEN",
     "VID_0B0E": "Jabra", "VID_047F": "Plantronics / Poly", "VID_1395": "Sennheiser", "VID_05A7": "Bose",
     "VID_041E": "Creative", "VID_0ECB": "JBL", "VID_1397": "Behringer", "VID_0FD9": "Elgato",

@@ -62,9 +62,9 @@ class TestManager:
         pytest_cmd = [str(venv_pytest)] if venv_pytest.exists() else [sys.executable, "-m", "pytest"]
 
         try:
+            pytest_target = f"{test_path}::{'::'.join(parts[1:])}" if len(parts) > 1 else test_path
             result = subprocess.run(
-                pytest_cmd + [test_path, "::" .join(parts[1:]) and f"{test_path}::{parts[1]}" or test_path,
-                              "-v", "--tb=short", "--no-header", "-q"],
+                pytest_cmd + [pytest_target, "-v", "--tb=short", "--no-header", "-q"],
                 cwd=self.project_root,
                 capture_output=True,
                 text=True,
