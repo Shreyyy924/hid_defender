@@ -168,22 +168,37 @@ def _run_monitor(logger):
             logger.info(f"Safe device: {info['name']}")
         else:  # UNTRUSTED
             logger.warning(f"🚨 UNTRUSTED DEVICE DETECTED: {info['id']}")
-            
+
             # ===== SECURITY RESPONSE =====
-            # 1. Play alert sound
+            # 1. Play alert sound immediately
             play_alert_sound()
-            
-            # 2. Show critical alert to user
+
+            # 2. Register with keystroke monitor ASAP for first-input delay detection
+            if keystroke_mon:
+                keystroke_mon.register_device_connection(info)
+
+            # 3. Disable the device FIRST — silences it before it can type
+            device_silenced = False
+            try:
+                logger.info("🚫 Disabling malicious device immediately...")
+                if IS_WINDOWS and check_admin():
+                    if kill_device(info['id']):
+                        action = "DISABLED"
+                        device_silenced = True
+                        logger.warning("✓ Device disabled — input blocked")
+                else:
+                    # Non-admin fallback: try eject
+                    logger.warning("⚠️  Not running as admin — cannot disable device directly")
+            except Exception as e:
+                logger.error(f"Failed to disable device: {e}")
+
+            # 4. Show critical alert popup (non-blocking thread)
             try:
                 show_alert(info)
             except Exception as e:
                 logger.error(f"Failed to show alert: {e}")
-            
-            # 3. Register with keystroke monitor for first-input delay detection
-            if keystroke_mon:
-                keystroke_mon.register_device_connection(info)
-            
-            # 4. Lock the workstation on all platforms
+
+            # 5. Lock the workstation
             try:
                 logger.info("🔒 Locking workstation...")
                 if lock_workstation():
@@ -191,22 +206,16 @@ def _run_monitor(logger):
                     action = "LOCKED"
             except Exception as e:
                 logger.error(f"Failed to lock workstation: {e}")
-            
-            # 5. Eject/disable the device
-            try:
-                logger.info("⏏️  Ejecting malicious USB device...")
-                from .alert_system import eject_usb_device
-                if eject_usb_device(info['id']):
-                    logger.warning("✓ USB device ejected successfully")
-                    action = "EJECTED"
-                else:
-                    logger.warning("⚠️  Could not eject device, will attempt to disable...")
-                    # Fallback on Windows: disable the device
-                    if IS_WINDOWS and check_admin():
-                        if kill_device(info['id']):
-                            action = "DISABLED"
-            except Exception as e:
-                logger.error(f"Failed to eject device: {e}")
+
+            # 6. Eject/remove the device if not already silenced
+            if not device_silenced:
+                try:
+                    logger.info("⏏️  Ejecting malicious USB device...")
+                    if eject_usb_device(info['id']):
+                        logger.warning("✓ USB device ejected successfully")
+                        action = "EJECTED"
+                except Exception as e:
+                    logger.error(f"Failed to eject device: {e}")
 
 
     def device_callback(new_devices):
@@ -214,20 +223,22 @@ def _run_monitor(logger):
         for dev in new_devices:
             handle_event(dev, whitelist, keystroke_mon)
 
-    # Initialize monitoring
+    # ── Initialize ───────────────────────────────────────────────────────────
     logger.info(f"HID Defender {platform.system()} {platform.release()}")
     logger.info("Loading whitelisted devices...")
-    
     whitelist = get_whitelist()
+
+    # ── Start keystroke monitor FIRST so it's ready before any device connects ──
     keystroke_mon = None
-    
     if PYNPUT_AVAILABLE:
         keystroke_mon = KeystrokeMonitor(logger=logger)
-        logger.info("Keystroke monitor enabled")
-    
+        keystroke_mon.start()
+        logger.info("Keystroke monitor active and listening")
+        time.sleep(0.1)  # ensure listener thread is up before device scan starts
+
     logger.info("Monitoring started. Press Ctrl+C to stop.")
-    
-    # Start background device monitor
+
+    # ── Start background device monitor ──────────────────────────────────────
     wmi_client = None
     if IS_WINDOWS:
         try:
@@ -235,15 +246,15 @@ def _run_monitor(logger):
             wmi_client = wmi.WMI()
         except Exception as e:
             logger.warning(f"Could not initialize WMI: {e}")
-    
+
     monitor = BackgroundDeviceMonitor(
         callback=device_callback,
-        scan_interval=2.0,
-        cache_ttl=1.0,
+        scan_interval=0.5,   # ← was 2.0s; reduced to catch fast Pico attacks
+        cache_ttl=0.4,
         wmi_client=wmi_client
     )
     monitor.start()
-    logger.info("Background device monitor started (non-blocking)")
+    logger.info("Background device monitor started (scan every 0.5s)")
     
     try:
         # Main thread stays responsive for Ctrl+C

@@ -2,6 +2,15 @@
     {
         "hardware_id": "VID_04F2&PID_B75E",
         "vendor": "(Standard USB Host Controller)",
-        "name": "USB Composite Device"
+        "name": "USB Composite Device",
+        "first_seen": "2026-04-27 20:30:00",
+        "last_seen": "2026-04-27 22:57:39"
+    },
+    {
+        "hardware_id": "VID_1C4F&PID_0034",
+        "vendor": "(Standard system devices)",
+        "name": "USB Input Device",
+        "first_seen": "2026-04-27 22:30:06",
+        "last_seen": "2026-04-27 22:59:21"
     }
 ]

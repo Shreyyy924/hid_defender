@@ -12,14 +12,14 @@ from datetime import datetime
 try:
     from .config import (
         WHITELIST_PATH, ATTACK_VECTORS, BIG_BRANDS,
-        SUSPICIOUS_MAPPING, RECENT_SEEN
+        SUSPICIOUS_MAPPING, RECENT_SEEN, KNOWN_VENDORS
     )
     from .device_monitor import get_macos_usb_devices
 except ImportError:
     # Fallback for testing or standalone execution
     from config import (  # type: ignore
         WHITELIST_PATH, ATTACK_VECTORS, BIG_BRANDS,
-        SUSPICIOUS_MAPPING, RECENT_SEEN
+        SUSPICIOUS_MAPPING, RECENT_SEEN, KNOWN_VENDORS
     )
     from device_monitor import get_macos_usb_devices  # type: ignore
 
@@ -54,9 +54,28 @@ def get_whitelist():
 
 
 def save_whitelist(data):
-    """Saves your currently connected devices as a baseline."""
+    """Saves the trusted device list to JSON."""
+    os.makedirs(os.path.dirname(WHITELIST_PATH), exist_ok=True)
     with open(WHITELIST_PATH, "w") as f:
         json.dump(data, f, indent=4)
+
+
+def _now_str():
+    """Return current timestamp string."""
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+
+def _touch_device(whitelist, hw_id):
+    """Update last_seen for a device already in the whitelist. Returns True if found."""
+    now = _now_str()
+    for item in whitelist:
+        if hardware_id_matches(item.get("hardware_id", ""), hw_id):
+            item["last_seen"] = now
+            if "first_seen" not in item:
+                item["first_seen"] = now
+            save_whitelist(whitelist)
+            return True
+    return False
 
 
 def run_baseline_setup(wmi_obj=None, logger=None):
@@ -82,6 +101,8 @@ def run_baseline_setup(wmi_obj=None, logger=None):
                 hw_id = normalize_hardware_id(details['id'])
                 entry = {"hardware_id": hw_id, "vendor": details['vendor'], "name": details['name']}
                 if entry not in new_baseline:
+                    entry["first_seen"] = _now_str()
+                    entry["last_seen"]  = _now_str()
                     new_baseline.append(entry)
     elif IS_WINDOWS:
         # Windows fallback: use built-in wmic command (no wmi package needed)
@@ -91,6 +112,8 @@ def run_baseline_setup(wmi_obj=None, logger=None):
             hw_id = normalize_hardware_id(details['id'])
             entry = {"hardware_id": hw_id, "vendor": details['vendor'], "name": details['name']}
             if entry not in new_baseline:
+                entry["first_seen"] = _now_str()
+                entry["last_seen"]  = _now_str()
                 new_baseline.append(entry)
     else:
         # macOS/Linux
@@ -99,6 +122,8 @@ def run_baseline_setup(wmi_obj=None, logger=None):
             hw_id = normalize_hardware_id(details['id'])
             entry = {"hardware_id": hw_id, "vendor": details['vendor'], "name": details['name']}
             if entry not in new_baseline:
+                entry["first_seen"] = _now_str()
+                entry["last_seen"]  = _now_str()
                 new_baseline.append(entry)
 
     save_whitelist(new_baseline)
@@ -125,17 +150,13 @@ def parse_device(dev_info):
         product = prod
         hw_id = pnp_id
         
-        # Smart Vendor Mapping
-        brand_vids = {
-            "VID_1B1C": "Corsair", "VID_046D": "Logitech", "VID_1532": "Razer",
-            "VID_045E": "Microsoft", "VID_413C": "Dell", "VID_03F0": "HP", "VID_17EF": "Lenovo"
-        }
-        for vid, brand in brand_vids.items():
+        # Smart Vendor Mapping (Expanded with 100+ manufacturers)
+        for vid, brand in KNOWN_VENDORS.items():
             if vid in pnp_id.upper():
                 vendor = brand
                 break
         
-        # Secondary check for suspicious VIDs
+        # Secondary check for legacy mapping
         if vendor == "Unknown":
             for vid, brand in SUSPICIOUS_MAPPING.items():
                 if vid in pnp_id.upper():
@@ -174,6 +195,12 @@ def evaluate(info, whitelist):
     n_low = info.get('name', info.get('description', info.get('product', ''))).lower()
 
     # Step 1: Check blacklisted hardware IDs for known attack vectors
+    # Note: If a VID is in BOTH KNOWN_VENDORS and ATTACK_VECTORS (like Pi Pico),
+    # we allow it initially but keep the behavioral monitor active.
+    for vid, brand in KNOWN_VENDORS.items():
+        if vid in raw_id:
+            return "TRUSTED", "ALLOWED", f"Manufacturer: {brand} (Known VID)"
+
     for bad_vid in ATTACK_VECTORS:
         if bad_vid in raw_id:
             return "UNTRUSTED", "BLOCKED", f"Attack-vector VID detected: {bad_vid}"
@@ -181,6 +208,8 @@ def evaluate(info, whitelist):
     # Step 2: Check the trusted whitelist by exact normalized VID/PID match
     for item in whitelist:
         if hardware_id_matches(item.get("hardware_id", ""), raw_id):
+            # Update last_seen timestamp in the JSON file
+            _touch_device(whitelist, raw_id)
             return "TRUSTED", "ALLOWED", "Whitelisted device"
 
     # Step 3: Heuristic allow-list for familiar brands and mice
