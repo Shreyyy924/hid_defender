@@ -543,6 +543,7 @@ input:focus, select:focus {
 .badge.safe { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
 .badge.trusted { background: rgba(16, 185, 129, 0.2); color: #34d399; }
 .badge.untrusted { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+.badge.advanced { background: rgba(139, 92, 246, 0.2); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.3); box-shadow: 0 0 10px rgba(139, 92, 246, 0.2); }
 
 .status-active {
     display: inline-block;

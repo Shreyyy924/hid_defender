@@ -73,24 +73,29 @@ SUSPICIOUS_MAPPING = {
 # Malicious command patterns to detect
 MALICIOUS_PATTERNS = [
     # Shell launchers
-    "powershell", "pwsh", "cmd.exe", "cmd /c",
+    "powershell", "pwsh", "cmd.exe", "cmd /c", "/bin/sh", "/bin/bash",
     # Registry & scheduling
-    "reg add", "reg delete",
-    "taskkill", "schtasks",
+    "reg add", "reg delete", "reg query",
+    "taskkill", "schtasks", "at.exe",
     # WMI & process
-    "wmic", "Get-Process", "Stop-Service",
+    "wmic", "Get-Process", "Stop-Service", "Get-Service", "tasklist",
     # AV/security bypass
-    "Set-MpPreference", "Disable-WindowsOptionalFeature",
-    # Remote download
-    "wget", "curl", "invoke-webrequest",
-    "certutil", "bitsadmin",
+    "Set-MpPreference", "Disable-WindowsOptionalFeature", "sc stop WinDefend",
+    # Remote download & C2
+    "wget", "curl", "invoke-webrequest", "iwr ",
+    "certutil", "bitsadmin", "nslookup -q=txt",
     # User & ACL manipulation
-    "net user", "net group",
+    "net user", "net group", "net localgroup",
     "icacls", "attrib", "del /f", "rmdir /s",
-    # Additional BadUSB vectors
+    # Exploitation & Post-Exploitation
+    "mimikatz", "sekurlsa", "lsass", "procdump",
+    "nc -e", "nc -lp", "ncat ", "reverse_tcp",
+    "whoami", "hostname", "ipconfig /all", "ifconfig",
+    # Scripting & Execution vectors
     "mshta", "rundll32", "wscript", "cscript",
     "Start-Process", "Invoke-Expression", "iex ",
-    "DownloadString", "-EncodedCommand",
+    "DownloadString", "DownloadFile", "-EncodedCommand", "-enc ",
+    "base64", "base64decode",
 ]
 
 # Keystroke monitoring thresholds

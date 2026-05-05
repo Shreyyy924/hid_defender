@@ -149,26 +149,28 @@ class KeystrokeMonitor:
                         break
                 self.keystroke_count = contiguous_count
                 if keystroke_speed > KEYSTROKE_THRESHOLD:
-                    # ensure the high speed is continuous (no long gaps)
+                    # 🛡️ ADVANCED HEURISTIC ANALYSIS
+                    # 1. Variance Analysis: Standard deviation of intervals
+                    variance = self._calculate_typing_variance(recent)
+                    # 2. Entropy Check: Normalized Shannon Entropy of intervals
+                    entropy = self._calculate_typing_entropy(recent)
+                    # 3. Jitter Check: Detect fixed-delay scripts with low jitter
+                    is_rhythmic = (variance < 0.008 or entropy < 0.8) and len(recent) >= 6
+                    
+                    # Ensure high speed is continuous (no long gaps)
                     diffs = [recent[i] - recent[i - 1] for i in range(1, len(recent))]
                     contiguous = all(d <= 0.05 for d in diffs)
-                    
-                    # 🛡️ BURST ANALYSIS: Check for inhumanly low variance (rhythmic typing)
-                    # Human typing has natural jitter; scripts often use fixed delays.
-                    variance = self._calculate_typing_variance(recent)
-                    is_rhythmic = variance < 0.008 and len(recent) >= 6
                     
                     if contiguous or is_rhythmic:
                         self.speed_exceed_streak += 1
                         if self.speed_exceed_streak >= getattr(self, 'required_streak', 4):
-                            reason = "Burst Analysis" if is_rhythmic else "High Speed"
+                            reason = f"Heuristic: {'Rhythmic/Low-Entropy' if is_rhythmic else 'High-Speed Burst'}"
                             self.logger.warning(
                                 f"⚠️ AUTOMATED TYPING DETECTED ({reason}): {keystroke_speed:.1f} keys/sec "
-                                f"(Variance: {variance:.4f}s)"
+                                f"(Var: {variance:.4f}s, Ent: {entropy:.2f})"
                             )
                             self.trigger_keystroke_alert(keystroke_speed)
                     else:
-                        # not a continuous high-speed sequence; reset streak
                         self.speed_exceed_streak = 0
                 else:
                     self.speed_exceed_streak = 0
@@ -228,8 +230,31 @@ class KeystrokeMonitor:
             
         intervals = [times[i] - times[i-1] for i in range(1, len(times))]
         mean = sum(intervals) / len(intervals)
+        if mean == 0: return 0.0
         variance = sum((x - mean)**2 for x in intervals) / len(intervals)
         return variance**0.5
+
+    def _calculate_typing_entropy(self, times: List[float]) -> float:
+        """Calculate normalized Shannon Entropy of keystroke intervals.
+        
+        Human typing is high-entropy (unpredictable jitter).
+        Scripts are low-entropy (predictable or fixed jitter).
+        """
+        import math
+        from collections import Counter
+        
+        if len(times) < 8:
+            return 1.0 # High entropy for small samples
+            
+        # Round intervals to 5ms buckets to find patterns
+        intervals = [round((times[i] - times[i-1]) * 200) / 200 for i in range(1, len(times))]
+        counts = Counter(intervals)
+        probs = [c / len(intervals) for c in counts.values()]
+        
+        entropy = -sum(p * math.log2(p) for p in probs)
+        # Normalize by max possible entropy for this sample size
+        max_entropy = math.log2(len(intervals))
+        return entropy / max_entropy if max_entropy > 0 else 0.0
 
     def check_command_patterns(self, char: str) -> None:
         """Detect malicious command patterns in typed input.
